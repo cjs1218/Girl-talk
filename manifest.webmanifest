@@ -1,0 +1,10 @@
+{
+  "name": "Girl Talk",
+  "short_name": "Girl Talk",
+  "description": "Confidence, calm, goals and friendship tools for girls aged 8 to 10.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#fff7f0",
+  "theme_color": "#fff7f0",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
