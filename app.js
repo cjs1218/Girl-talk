@@ -8,6 +8,9 @@ const DEFAULTS = { setup:false, name:'', avatar:'🦄', stars:0, earned:{}, stre
 
 function loadState(){ try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ return {}; } }
 let S = Object.assign(JSON.parse(JSON.stringify(DEFAULTS)), loadState());
+if (!S.routine) S.routine = JSON.parse(JSON.stringify(ROUTINE_DEFAULT));
+if (!S.ticks) S.ticks = {};
+if (!S.noSchool) S.noSchool = {};
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} updateStars(); }
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -78,6 +81,7 @@ document.getElementById('back').addEventListener('click', () => { if (backTo) lo
 
 const routes = {
   'home': home, 'setup': setup, 'grownups': grownups,
+  'week': week, 'week/edit': weekEdit,
   'pet': petRoom, 'pet/adopt': petAdopt, 'pet/shop': petShop,
   'brave': braveHub, 'brave/strengths': strengths, 'brave/ladder': ladder, 'brave/selftalk': selfTalk,
   'calm': calmHub, 'calm/feelings': feelings, 'calm/breathe': breathe, 'calm/squeeze': squeeze,
@@ -131,6 +135,7 @@ function home(){
       <div><h1>Hi${S.name ? ' ' + esc(S.name) : ''}!</h1><p>${g}</p></div>
     </section>
     <a class="checkin" href="#/calm/feelings">How are you feeling today? <span>→</span></a>
+    ${weekBanner()}
     ${petBanner()}
     <div class="islands">
       ${ISLANDS.map(i => `<a class="island ${i.id}" href="#/${i.id}"><span class="isl-emoji">${i.emoji}</span><span class="isl-name">${i.name}</span><span class="isl-sub">${i.sub}</span></a>`).join('')}
@@ -880,6 +885,11 @@ function grownups(){
       <p class="ref">This is a supportive tool, not therapy. If you're worried about her mood, anxiety or bullying, speak to her school or GP.</p>
     </div>
     <div class="card gu">
+      <h3>Her week</h3>
+      <p>Set up her clubs, what to pack for each one, and her daily jobs. She can change it too.</p>
+      <a class="btn block" href="#/week/edit">✏️ Set up her week</a>
+    </div>
+    <div class="card gu">
       <h3>Reset</h3>
       <p>Clears her name, stars, goals, worries and diary from this device.</p>
       <button class="btn ghost block" id="reset">Reset all data</button>
@@ -889,7 +899,7 @@ function grownups(){
     const b = e.currentTarget;
     if (!b.dataset.sure){ b.dataset.sure = '1'; b.textContent = 'Tap again to delete everything'; return; }
     try { localStorage.removeItem(KEY); } catch(err){}
-    S = JSON.parse(JSON.stringify(DEFAULTS)); updateStars(); location.hash = '#/setup'; route();
+    S = JSON.parse(JSON.stringify(DEFAULTS)); S.routine = JSON.parse(JSON.stringify(ROUTINE_DEFAULT)); S.ticks = {}; S.noSchool = {}; updateStars(); location.hash = '#/setup'; route();
   };
 }
 
@@ -1066,6 +1076,175 @@ function petShop(){
       }
       draw();
     });
+  };
+  draw();
+}
+
+
+/* ---------- My Week ---------- */
+const DAY_KEYS = ['mon','tue','wed','thu','fri','sat','sun'];
+const DAY_LONG = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+const addDays = n => { const d = new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate() + n); return d; };
+const dayIdx = d => (d.getDay() + 6) % 7;
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+
+function bagFor(d){
+  const key = dkey(d), di = dayIdx(d);
+  const groups = [];
+  if (di < 5 && !S.noSchool[key] && S.routine.school.length) groups.push({ id:'school', e:'🏫', name:'School', items:S.routine.school });
+  (S.routine.clubs[DAY_KEYS[di]] || []).forEach(c => { if (c.bag.length) groups.push({ id:c.id, e:c.e, name:c.name, items:c.bag }); });
+  return groups;
+}
+const bagIds = d => bagFor(d).flatMap(g => g.items.map(i => `${g.id}:${i}`));
+const ticked = (date, id) => (S.ticks[date] || []).includes(id);
+function toggleTick(date, id){
+  const t = S.ticks[date] = S.ticks[date] || [];
+  const i = t.indexOf(id);
+  if (i >= 0) t.splice(i, 1); else t.push(id);
+  // keep only the last 21 days of ticks
+  const cut = dkey(addDays(-21));
+  Object.keys(S.ticks).forEach(k => { if (k < cut) delete S.ticks[k]; });
+  save();
+  return i < 0;
+}
+const allJobs = () => JOB_PARTS.flatMap(p => S.routine.jobs[p.id]);
+
+function todayCount(){
+  const d = addDays(0), key = dkey(d);
+  const ids = [...allJobs().map(j => 'job:' + j.id), ...bagIds(d).map(b => 'bag:' + b)];
+  return { done: ids.filter(id => ticked(key, id)).length, total: ids.length };
+}
+
+function weekBanner(){
+  const d = addDays(0), clubs = S.routine.clubs[DAY_KEYS[dayIdx(d)]] || [];
+  const { done, total } = todayCount();
+  const sub = clubs.length ? 'Today: ' + clubs.map(c => c.e + ' ' + esc(c.name)).join(' · ') : 'No clubs today';
+  return `<a class="petbanner weekbanner" href="#/week"><span class="pb-pet">📅</span><span><b>My week</b><small>${sub} · ${done} of ${total} done</small></span><span class="pb-go">→</span></a>`;
+}
+
+let weekOffset = 0;
+function week(){
+  setTop('My week', '#/home', 'week');
+  const draw = () => {
+    const d = addDays(weekOffset), key = dkey(d), di = dayIdx(d);
+    const isToday = weekOffset === 0;
+    const clubs = S.routine.clubs[DAY_KEYS[di]] || [];
+    const groups = bagFor(d);
+    const bIds = bagIds(d);
+    const bagDone = bIds.filter(id => ticked(key, 'bag:' + id)).length;
+    const { done, total } = todayCount();
+    const checkRow = (id, e, t, disabled) => `<button class="check ${ticked(key, id) ? 'on' : ''}" data-id="${esc(id)}" ${disabled ? 'disabled' : ''}><span class="box">${ticked(key, id) ? '✓' : ''}</span>${e ? `<span class="ce">${e}</span>` : ''}<span class="ct">${esc(t)}</span></button>`;
+    view(`
+      <div class="weekstrip">${[...Array(7)].map((_,n) => { const x = addDays(n), xc = (S.routine.clubs[DAY_KEYS[dayIdx(x)]] || []);
+        return `<button class="wd ${n===weekOffset?'on':''}" data-n="${n}"><small>${n===0 ? 'Today' : n===1 ? 'Tmrw' : DAY_LONG[dayIdx(x)].slice(0,3)}</small><b>${x.getDate()}</b><span>${xc.map(c => c.e).join('') || '·'}</span></button>`; }).join('')}</div>
+      <h2>${isToday ? 'Today, ' : weekOffset === 1 ? 'Tomorrow, ' : ''}${DAY_LONG[di]} ${d.getDate()} ${d.toLocaleDateString('en-GB',{month:'long'})}</h2>
+      ${isToday ? `<div class="card soft"><b>${done} of ${total} done today</b><div class="progress" style="margin-bottom:0"><i style="width:${total ? Math.round(done/total*100) : 0}%"></i></div></div>` : ''}
+
+      <h3>Clubs and activities</h3>
+      ${clubs.length ? clubs.map(c => `<div class="club"><span class="ce">${c.e}</span><span><b>${esc(c.name)}</b>${c.time ? `<small>${esc(c.time)}</small>` : ''}</span></div>`).join('')
+        : `<div class="card muted center">No clubs ${isToday ? 'today' : 'this day'}. Free time! 🎉</div>`}
+
+      <h3 style="margin-top:18px">🎒 Pack my bag${weekOffset === 1 ? ' for tomorrow' : ''}</h3>
+      ${di < 5 ? `<label class="noschool"><input type="checkbox" id="ns" ${S.noSchool[key] ? 'checked' : ''}> No school this day (holiday or INSET day)</label>` : ''}
+      ${groups.length ? `<div class="card">${groups.map(g => `<p class="grp">${g.e} ${esc(g.name)}</p>${g.items.map(i => checkRow(`bag:${g.id}:${i}`, '', i)).join('')}`).join('')}
+        <p class="muted center" style="margin:8px 0 0">${bagDone} of ${bIds.length} packed${bagDone === bIds.length ? ' 🎉' : ''}</p></div>`
+        : `<div class="card muted center">Nothing to pack. Enjoy your day!</div>`}
+
+      <h3 style="margin-top:18px">✅ My jobs</h3>
+      ${isToday ? JOB_PARTS.map(p => `<div class="card"><p class="grp">${p.e} ${p.name}</p>
+          ${S.routine.jobs[p.id].map(j => checkRow('job:' + j.id, j.e, j.t)).join('') || '<p class="muted" style="margin:0">No jobs here.</p>'}
+          ${p.id === 'bedtime' ? '<button class="btn ghost block" id="tmrw" style="margin-top:10px">🎒 Open tomorrow\'s bag</button>' : ''}</div>`).join('')
+        : `<div class="card muted center">Jobs are ticked off on the day. Come back ${weekOffset === 1 ? 'tomorrow' : 'on ' + DAY_LONG[di]}!</div>`}
+
+      <a class="btn ghost block" href="#/week/edit" style="margin-top:6px">✏️ Change my week</a>
+    `);
+    $$('.wd').forEach(b => b.onclick = () => { weekOffset = +b.dataset.n; draw(); });
+    if ($('#tmrw')) $('#tmrw').onclick = () => { weekOffset = 1; draw(); window.scrollTo(0, 0); };
+    if ($('#ns')) $('#ns').onchange = e => { if (e.target.checked) S.noSchool[key] = true; else delete S.noSchool[key]; save(); draw(); };
+    $$('.check').forEach(b => b.onclick = () => {
+      const id = b.dataset.id;
+      const on = toggleTick(key, id);
+      if (on && id.startsWith('job:')) award(`job-${key}-${id}`, 1, 'Job done!');
+      if (on && id.startsWith('bag:') && bIds.every(x => ticked(key, 'bag:' + x))) { award(`bag-${key}`, 2, 'Bag all packed!'); }
+      if (on && isToday){
+        const c = todayCount();
+        if (c.done === c.total && award(`day-${key}`, 3, 'Whole day done! 🎉')) confetti();
+      }
+      const y = window.scrollY; draw(); window.scrollTo(0, y);
+    });
+  };
+  draw();
+}
+
+function weekEdit(){
+  setTop('Change my week', '#/week', 'week');
+  let day = dayIdx(addDays(0));
+  const R = S.routine;
+  const listEditor = (key, items, placeholder) => `
+    <div class="elist" data-list="${key}">
+      ${items.map((it, k) => `<div class="erow"><span>${esc(typeof it === 'string' ? it : it.e + ' ' + it.t)}</span><button class="del" data-list="${key}" data-k="${k}" aria-label="Remove">✕</button></div>`).join('')}
+      <div class="row"><input id="add-${key}" maxlength="50" placeholder="${placeholder}"><button class="btn addbtn" data-list="${key}" style="flex:none">Add</button></div>
+    </div>`;
+  const draw = () => {
+    const dk = DAY_KEYS[day], clubs = R.clubs[dk];
+    view(`
+      <p class="intro">Set up your clubs, what to pack for them, and your jobs. Changes save straight away.</p>
+      <div class="card">
+        <h3>Clubs and activities</h3>
+        <div class="tabs">${DAY_KEYS.map((k,i) => `<button class="tab ${i===day?'on':''}" data-d="${i}">${DAY_LONG[i].slice(0,3)}${R.clubs[k].length ? ' ' + R.clubs[k].map(c => c.e).join('') : ''}</button>`).join('')}</div>
+        ${clubs.map((c,k) => `
+          <div class="clubedit">
+            <div class="row">
+              <select data-c="${k}" data-f="e" aria-label="Picture" style="flex:none;width:76px">${CLUB_EMOJI.map(e => `<option ${e===c.e?'selected':''}>${e}</option>`).join('')}</select>
+              <input data-c="${k}" data-f="name" value="${esc(c.name)}" maxlength="30" placeholder="Club name" style="flex:1;min-width:0">
+            </div>
+            <label class="lbl">Time (optional)</label>
+            <input type="time" data-c="${k}" data-f="time" value="${esc(c.time)}">
+            <label class="lbl">What to pack (one per line)</label>
+            <textarea data-c="${k}" data-f="bag" placeholder="e.g. Swimming costume">${esc(c.bag.join('\n'))}</textarea>
+            <button class="btn ghost block delclub" data-c="${k}" style="margin-top:10px">Remove this club</button>
+          </div>`).join('') || `<p class="muted">No clubs on ${DAY_LONG[day]}.</p>`}
+        <button class="btn block" id="addclub">+ Add a club on ${DAY_LONG[day]}</button>
+      </div>
+      <div class="card">
+        <h3>🏫 School bag</h3>
+        <p class="muted" style="margin-top:-4px">Packed every school day, Monday to Friday.</p>
+        ${listEditor('school', R.school, 'e.g. Reading book')}
+      </div>
+      ${JOB_PARTS.map(p => `<div class="card"><h3>${p.e} ${p.name} jobs</h3>${listEditor(p.id, R.jobs[p.id], 'e.g. Feed the cat')}</div>`).join('')}
+      <div class="card">
+        <h3>Start again</h3>
+        <button class="btn ghost block" id="resetweek">Go back to the example week</button>
+      </div>
+      <a class="btn block" href="#/week">Done</a>
+    `);
+    $$('.tab[data-d]').forEach(b => b.onclick = () => { day = +b.dataset.d; draw(); });
+    $$('[data-c][data-f]').forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => {
+      const c = clubs[+el.dataset.c], f = el.dataset.f;
+      c[f] = f === 'bag' ? el.value.split('\n').map(x => x.trim()).filter(Boolean) : el.value;
+      save();
+      if (f === 'e') draw();
+    }));
+    $$('.delclub').forEach(b => b.onclick = () => {
+      if (!b.dataset.sure){ b.dataset.sure = '1'; b.textContent = 'Tap again to remove'; return; }
+      clubs.splice(+b.dataset.c, 1); save(); draw();
+    });
+    $('#addclub').onclick = () => { clubs.push({ id: uid(), e: CLUB_EMOJI[0], name: '', time: '', bag: [] }); save(); draw();
+      const ins = $$('.clubedit input[data-f=name]'); ins[ins.length-1].focus(); };
+    const listOf = key => key === 'school' ? R.school : R.jobs[key];
+    const partEmoji = { morning:'☀️', after:'🏠', bedtime:'🌙' };
+    $$('.del').forEach(b => b.onclick = () => { listOf(b.dataset.list).splice(+b.dataset.k, 1); save(); draw(); });
+    $$('.addbtn').forEach(b => b.onclick = () => {
+      const key = b.dataset.list, inp = $('#add-' + key), v = inp.value.trim();
+      if (!v) return;
+      listOf(key).push(key === 'school' ? v : { id: uid(), e: partEmoji[key], t: v });
+      save(); draw();
+    });
+    $('#resetweek').onclick = e => {
+      const b = e.currentTarget;
+      if (!b.dataset.sure){ b.dataset.sure = '1'; b.textContent = 'Tap again to replace your week'; return; }
+      S.routine = JSON.parse(JSON.stringify(ROUTINE_DEFAULT)); save(); weekEdit();
+    };
   };
   draw();
 }

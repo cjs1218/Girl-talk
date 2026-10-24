@@ -393,3 +393,48 @@ const PET_SAYS = [
   'You\'re a great friend to me.',
   'Want to try a brave step today?'
 ];
+
+/* ---------- My Week ---------- */
+// Example week. Everything here can be changed in the app ("Change my week").
+// Days: mon tue wed thu fri sat sun. School items are packed Mon–Fri.
+
+const CLUB_EMOJI = ['🏊','💃','⚽','🎹','🎻','🧭','🥋','🤸','🎨','🐴','🎾','🏃','🎭','📚','🧑‍🍳','🏸','🛼','⛸️','🎤','🧩','⛪','👵'];
+
+const ROUTINE_DEFAULT = {
+  clubs: {
+    mon: [{ id:'c1', e:'🏊', name:'Swimming', time:'16:30', bag:['Swimming costume','Towel','Goggles','Hairbrush','Snack'] }],
+    tue: [],
+    wed: [{ id:'c2', e:'🧭', name:'Brownies', time:'18:00', bag:['Brownies uniform','Subs money'] }],
+    thu: [{ id:'c3', e:'🏃', name:'PE at school', time:'', bag:['PE kit','Trainers','Hair bobble'] }],
+    fri: [],
+    sat: [{ id:'c4', e:'💃', name:'Dance', time:'10:00', bag:['Leotard','Ballet shoes','Hair bobble','Water bottle'] }],
+    sun: []
+  },
+  school: ['Reading book & record','Water bottle','Lunchbox','Coat'],
+  jobs: {
+    morning: [
+      { id:'j1', e:'🛏️', t:'Make my bed' },
+      { id:'j2', e:'👕', t:'Get dressed' },
+      { id:'j3', e:'🍽️', t:'Breakfast things in the dishwasher' },
+      { id:'j4', e:'🪥', t:'Brush my teeth' },
+      { id:'j5', e:'💇‍♀️', t:'Brush my hair' }
+    ],
+    after: [
+      { id:'j6', e:'🎒', t:'Unpack my school bag' },
+      { id:'j7', e:'🥪', t:'Lunchbox to the kitchen' },
+      { id:'j8', e:'📖', t:'Reading or homework' }
+    ],
+    bedtime: [
+      { id:'j9',  e:'🧺', t:'Dirty clothes in the wash basket' },
+      { id:'j10', e:'👗', t:'Lay out clothes for tomorrow' },
+      { id:'j11', e:'🎒', t:'Pack my bag for tomorrow' },
+      { id:'j12', e:'🪥', t:'Brush my teeth' }
+    ]
+  }
+};
+
+const JOB_PARTS = [
+  { id:'morning', e:'☀️', name:'Morning' },
+  { id:'after',   e:'🏠', name:'After school' },
+  { id:'bedtime', e:'🌙', name:'Bedtime' }
+];

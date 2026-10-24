@@ -12,6 +12,7 @@ No accounts, no messaging, no tracking. Everything is saved only in the browser 
 | 🌈 **Calm Corner** | Feelings check-in (name + size) · Flower & candle breathing · Squeeze & relax · 5-4-3-2-1 senses · Worry sorter · Feelings diary | Affect labelling, slow breathing, progressive muscle relaxation, grounding, CBT problem-solving |
 | 🚀 **My Goals** | WOOP goal builder (Wish, Outcome, Obstacle, Plan) with a weekly "I tried" tracker | Mental contrasting with implementation intentions (Oettingen; Duckworth et al., 2013) |
 | 💞 **Friendship Tools** | Mouse, Monster or Me? · Six branching friendship stories · Brave words + "I feel" builder · Kind friend or not? · Stop, Think, Do · Who can help me? | Assertiveness and social problem-solving from social-skills training |
+| 📅 **My Week** | Clubs for each day, a packing checklist (school bag Mon–Fri plus each club's kit, with tomorrow's bag for packing at bedtime), and morning, after-school and bedtime jobs. Editable by her or a grown-up | Visual routines and checklists build independence. 1 star per job, bonuses for a packed bag and a finished day |
 | 🐾 **My Pet** | Spend stars to adopt a pet, then buy homes, furniture, toys, food and dress-up items | Rewards effort, not right answers. No guilt mechanics: the pet never gets ill or leaves |
 | 🧡 **For grown-ups** | Emotion coaching guide, evidence notes, data reset | Gottman's emotion coaching; *Tuning in to Kids* |
 

@@ -13,6 +13,7 @@
 body.t-brave{--accent:var(--brave);--accent-soft:var(--brave-soft)}
 body.t-calm{--accent:var(--calm);--accent-soft:var(--calm-soft)}
 body.t-goals{--accent:var(--goals);--accent-soft:var(--goals-soft)}
+body.t-week{--accent:#2f72c8;--accent-soft:#e1edfb}
 body.t-friends{--accent:var(--friends);--accent-soft:var(--friends-soft)}
 
 *{box-sizing:border-box}
@@ -232,3 +233,31 @@ label.lbl{display:block;font-weight:800;margin:14px 0 6px}
 .buy.use{background:var(--good)}
 .buy.using{background:var(--accent-soft);color:var(--accent);opacity:1}
 @media (prefers-reduced-motion: reduce){.petwrap,.petbanner .pb-pet{animation:none}}
+
+/* ---------- My Week ---------- */
+.weekbanner{background:linear-gradient(135deg,#fff,#eef5ff);border-color:#cfe1fa}
+.weekstrip{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:4px 0 16px}
+.wd{display:flex;flex-direction:column;align-items:center;gap:2px;border:2px solid var(--line);background:#fff;border-radius:16px;padding:8px 2px;font:700 12px 'Nunito',sans-serif;color:var(--muted);cursor:pointer;min-width:0}
+.wd b{font-size:18px;color:var(--ink)}
+.wd span{font-size:13px;min-height:18px;white-space:nowrap;overflow:hidden;max-width:100%}
+.wd.on{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
+.club{display:flex;align-items:center;gap:14px;background:#fff;border-radius:18px;padding:12px 16px;margin-bottom:10px;box-shadow:var(--shadow)}
+.club .ce{font-size:34px}
+.club small{display:block;color:var(--muted);font-weight:700}
+.grp{font-weight:800;margin:6px 0 6px;color:var(--accent)}
+.grp:first-child{margin-top:0}
+.check{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;padding:10px 2px;font:700 17px 'Nunito',sans-serif;color:var(--ink);cursor:pointer;min-height:52px}
+.check:last-of-type{border-bottom:0}
+.check .box{width:30px;height:30px;border-radius:10px;border:2px solid #cdd9ea;display:grid;place-items:center;font-weight:900;color:#fff;flex:none;font-size:18px}
+.check .ce{font-size:22px;flex:none}
+.check .ct{flex:1;min-width:0}
+.check.on .box{background:var(--good);border-color:var(--good)}
+.check.on .ct{color:var(--muted);text-decoration:line-through}
+.noschool{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;color:var(--muted);margin:0 0 10px}
+.noschool input{width:22px;height:22px;accent-color:var(--accent)}
+.clubedit{border:2px solid var(--line);border-radius:18px;padding:12px;margin:10px 0}
+.erow{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-weight:700}
+.erow span{flex:1;min-width:0}
+.del{border:0;background:var(--bad-soft);color:var(--bad);width:36px;height:36px;border-radius:50%;font-weight:900;cursor:pointer;flex:none}
+.elist .row{margin-top:10px}
+.elist .row input{flex:1;min-width:0}
