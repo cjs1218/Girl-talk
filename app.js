@@ -1088,6 +1088,8 @@ const addDays = n => { const d = new Date(); d.setHours(12,0,0,0); d.setDate(d.g
 const dayIdx = d => (d.getDay() + 6) % 7;
 const fmtHour = h => `${h % 12 || 12}${h < 12 ? 'am' : 'pm'}`;
 const fmtTime = t => { if (!t) return ''; const [h, m] = t.split(':').map(Number); return `${h % 12 || 12}${m ? ':' + pad(m) : ''}${h < 12 ? 'am' : 'pm'}`; };
+const isCustom = c => c.custom || !CLUB_EMOJI.some(o => o.e === c.e);
+const focusName = k => { const el = $(`input[data-c="${k}"][data-f="name"]`); if (el){ el.scrollIntoView({ block:'center' }); el.focus(); } };
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
 
 function bagFor(d){
@@ -1197,10 +1199,12 @@ function weekEdit(){
         ${clubs.map((c,k) => `
           <div class="clubedit">
             <div class="row">
-              <select data-c="${k}" data-f="e" aria-label="Activity" style="flex:1;min-width:0">${CLUB_EMOJI.map(o => `<option value="${o.e}" ${o.e===c.e?'selected':''}>${o.e} ${o.name}</option>`).join('')}</select>
+              <select data-c="${k}" data-f="e" aria-label="Activity" style="flex:1;min-width:0">${CLUB_EMOJI.map(o => `<option value="${o.e}" ${!isCustom(c) && o.e===c.e?'selected':''}>${o.e} ${o.name}</option>`).join('')}<option value="custom" ${isCustom(c)?'selected':''}>✏️ My own club…</option></select>
             </div>
+            ${isCustom(c) ? `<label class="lbl">Pick a picture</label>
+            <div class="pickpics">${OWN_EMOJI.map(e => `<button class="${e===c.e?'on':''}" data-c="${k}" data-pic="${e}" aria-label="Picture ${e}">${e}</button>`).join('')}</div>` : ''}
             <label class="lbl">Name</label>
-            <input data-c="${k}" data-f="name" value="${esc(c.name)}" maxlength="30" placeholder="Club name">
+            <input data-c="${k}" data-f="name" value="${esc(c.name)}" maxlength="30" placeholder="${isCustom(c) ? 'e.g. Park run' : 'Club name'}">
             <label class="lbl">Time (optional)</label>
             <div class="row timepick">
               <select data-c="${k}" data-t="h" aria-label="Hour"><option value="">No time</option>${[...Array(16)].map((_,n) => { const h = pad(n+6); return `<option value="${h}" ${c.time.slice(0,2)===h?'selected':''}>${fmtHour(n+6)}</option>`; }).join('')}</select>
@@ -1210,7 +1214,10 @@ function weekEdit(){
             <textarea data-c="${k}" data-f="bag" placeholder="e.g. Swimming costume">${esc(c.bag.join('\n'))}</textarea>
             <button class="btn ghost block delclub" data-c="${k}" style="margin-top:10px">Remove this club</button>
           </div>`).join('') || `<p class="muted">No clubs on ${DAY_LONG[day]}.</p>`}
-        <button class="btn block" id="addclub">+ Add a club on ${DAY_LONG[day]}</button>
+        <div class="stack">
+          <button class="btn block" id="addclub">+ Add a club on ${DAY_LONG[day]}</button>
+          <button class="btn ghost block" id="addown">✏️ Add my own club</button>
+        </div>
       </div>
       <div class="card">
         <h3>🏫 School bag</h3>
@@ -1227,7 +1234,15 @@ function weekEdit(){
     $$('.tab[data-d]').forEach(b => b.onclick = () => { day = +b.dataset.d; draw(); });
     $$('[data-c][data-f]').forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => {
       const c = clubs[+el.dataset.c], f = el.dataset.f;
+      if (f === 'e' && el.value === 'custom'){
+        const was = isCustom(c) ? null : CLUB_EMOJI.find(o => o.e === c.e);
+        c.custom = true; c.e = OWN_EMOJI[0];
+        if (was && c.name === was.name) c.name = '';
+        if (was && c.bag.join('|') === was.bag.join('|')) c.bag = [];
+        save(); draw(); focusName(+el.dataset.c); return;
+      }
       if (f === 'e'){
+        c.custom = false;
         const was = CLUB_EMOJI.find(o => o.e === c.e), now = CLUB_EMOJI.find(o => o.e === el.value);
         c.e = el.value;
         if (now){
@@ -1245,6 +1260,8 @@ function weekEdit(){
       const h = $(`select[data-c="${k}"][data-t="h"]`).value, m = $(`select[data-c="${k}"][data-t="m"]`).value || '00';
       c.time = h ? `${h}:${m}` : ''; save(); draw();
     }));
+    $$('[data-pic]').forEach(b => b.onclick = () => { clubs[+b.dataset.c].e = b.dataset.pic; save(); draw(); });
+    $('#addown').onclick = () => { clubs.push({ id: uid(), custom: true, e: OWN_EMOJI[0], name: '', time: '', bag: [] }); save(); draw(); focusName(clubs.length - 1); };
     $$('.delclub').forEach(b => b.onclick = () => {
       if (!b.dataset.sure){ b.dataset.sure = '1'; b.textContent = 'Tap again to remove'; return; }
       clubs.splice(+b.dataset.c, 1); save(); draw();

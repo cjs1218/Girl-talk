@@ -411,6 +411,7 @@ const CLUB_EMOJI = [
   { e:'🐴', name:'Horse riding', bag:['Riding hat','Jodhpurs','Riding boots','Gloves'] },
   { e:'🛼', name:'Roller skating', bag:['Roller skates','Helmet','Knee pads'] },
   { e:'⛸️', name:'Ice skating', bag:['Gloves','Warm jumper','Hat'] },
+  { e:'🏃‍♀️', name:'Junior parkrun', bag:['parkrun barcode','Trainers','Water bottle'] },
   { e:'🏃', name:'PE at school', bag:['PE kit','Trainers','Hair bobble'] },
   { e:'🧘', name:'Yoga', bag:['Comfy clothes','Water bottle'] },
   { e:'🎹', name:'Piano', bag:['Piano book'] },
@@ -466,3 +467,6 @@ const JOB_PARTS = [
   { id:'after',   e:'🏠', name:'After school' },
   { id:'bedtime', e:'🌙', name:'Bedtime' }
 ];
+
+// Pictures to choose from for "My own club"
+const OWN_EMOJI = ['⭐','🏃‍♀️','🚴‍♀️','🌳','🏞️','🐕','🧗‍♀️','🎳','🏓','🏐','⛳','🏄‍♀️','🎣','🎮','🧶','🎸','🥁','🎺','🪴','🐾','🧪','🔭','🏕️','🎬','🧁','🛝','👯‍♀️','📝','🧩','🫶'];
