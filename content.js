@@ -306,3 +306,90 @@ const HELP_LIST = [
   'Something you see or hear online upsets you',
   'You just need a hug and a chat'
 ];
+
+/* ---------- My Pet ---------- */
+// Stars earned for trying things can be spent here.
+// Deliberately gentle: the pet never gets ill, sad or runs away if she doesn't visit.
+
+const ADOPT_COST = 5;
+
+const PETS = [
+  { id:'kitten',  e:'🐱', name:'Kitten',      fav:'fish' },
+  { id:'puppy',   e:'🐶', name:'Puppy',       fav:'bone' },
+  { id:'bunny',   e:'🐰', name:'Bunny',       fav:'carrot' },
+  { id:'hamster', e:'🐹', name:'Hamster',     fav:'cheese' },
+  { id:'fox',     e:'🦊', name:'Fox cub',     fav:'apple' },
+  { id:'panda',   e:'🐼', name:'Panda',       fav:'bamboo' },
+  { id:'unicorn', e:'🦄', name:'Unicorn',     fav:'strawberry', cost:15 },
+  { id:'dragon',  e:'🐲', name:'Baby dragon', fav:'pepper', cost:15 }
+];
+
+const PET_NAMES = ['Biscuit','Luna','Pip','Mochi','Sparkle','Coco','Bramble','Pickle','Honey','Star'];
+
+// Homes change the room colours
+const HOMES = [
+  { id:'box',       e:'📦', name:'Cardboard box',  cost:0,  wall:'#f6e7d4', floor:'#d9b98f' },
+  { id:'basket',    e:'🧺', name:'Cosy basket',    cost:8,  wall:'#fde2e4', floor:'#e8c39e' },
+  { id:'cottage',   e:'🏡', name:'Little cottage', cost:15, wall:'#e3f1ff', floor:'#c8a27a' },
+  { id:'treehouse', e:'🌳', name:'Treehouse',      cost:20, wall:'#dcf3d2', floor:'#a9825a' },
+  { id:'beach',     e:'🏖️', name:'Beach hut',      cost:20, wall:'#fff3c4', floor:'#f1d39a' },
+  { id:'igloo',     e:'🧊', name:'Snowy igloo',    cost:20, wall:'#e3f6ff', floor:'#f7fbff' },
+  { id:'castle',    e:'🏰', name:'Castle',         cost:30, wall:'#ece4ff', floor:'#c6b6e6' }
+];
+
+// x / y are % positions in the room
+const FURNITURE = [
+  { id:'plant',   e:'🪴', name:'Plant',         cost:4,  x:9,  y:58 },
+  { id:'picture', e:'🖼️', name:'Picture',       cost:5,  x:28, y:22 },
+  { id:'clock',   e:'🕰️', name:'Clock',         cost:5,  x:12, y:20 },
+  { id:'window',  e:'🪟', name:'Window',        cost:4,  x:50, y:24 },
+  { id:'lights',  e:'✨', name:'Fairy lights',  cost:6,  x:50, y:7 },
+  { id:'rainbow', e:'🌈', name:'Rainbow',       cost:8,  x:76, y:22 },
+  { id:'books',   e:'📚', name:'Bookshelf',     cost:6,  x:91, y:52 },
+  { id:'sofa',    e:'🛋️', name:'Sofa',          cost:10, x:18, y:80 },
+  { id:'bed',     e:'🛏️', name:'Comfy bed',     cost:8,  x:80, y:82 },
+  { id:'flowers', e:'💐', name:'Flowers',       cost:4,  x:94, y:76 },
+  { id:'balloon', e:'🎈', name:'Balloon',       cost:3,  x:66, y:12 }
+];
+
+const TOYS = [
+  { id:'ball',  e:'⚽', name:'Ball',       cost:3, x:38, y:90, say:'Wheee! Kick it to me!' },
+  { id:'yarn',  e:'🧶', name:'Wool ball',  cost:3, x:60, y:91, say:'Ooh, so bouncy and tangly!' },
+  { id:'teddy', e:'🧸', name:'Teddy',      cost:5, x:32, y:66, say:'Teddy cuddles are the best!' },
+  { id:'yoyo',  e:'🪀', name:'Yo-yo',      cost:4, x:67, y:70, say:'Up and down, up and down!' },
+  { id:'kite',  e:'🪁', name:'Kite',       cost:6, x:86, y:10, say:'Let\'s fly it really high!' }
+];
+
+const FOOD = [
+  { id:'apple',      e:'🍎', name:'Apple',      cost:1 },
+  { id:'carrot',     e:'🥕', name:'Carrot',     cost:1 },
+  { id:'strawberry', e:'🍓', name:'Strawberry', cost:1 },
+  { id:'fish',       e:'🐟', name:'Fish',       cost:2 },
+  { id:'bone',       e:'🦴', name:'Bone',       cost:2 },
+  { id:'cheese',     e:'🧀', name:'Cheese',     cost:2 },
+  { id:'bamboo',     e:'🎋', name:'Bamboo',     cost:2 },
+  { id:'pepper',     e:'🌶️', name:'Spicy pepper', cost:2 },
+  { id:'cupcake',    e:'🧁', name:'Cupcake treat', cost:3 }
+];
+
+// where = where it sits on the pet
+const ACCESSORIES = [
+  { id:'flower', e:'🌸', name:'Flower',     cost:4,  where:'head' },
+  { id:'bow',    e:'🎀', name:'Bow',        cost:5,  where:'head' },
+  { id:'shades', e:'🕶️', name:'Sunglasses', cost:6,  where:'face' },
+  { id:'scarf',  e:'🧣', name:'Scarf',      cost:6,  where:'neck' },
+  { id:'tophat', e:'🎩', name:'Top hat',    cost:8,  where:'head' },
+  { id:'cap',    e:'🎓', name:'Clever cap', cost:10, where:'head' },
+  { id:'crown',  e:'👑', name:'Crown',      cost:12, where:'head' }
+];
+
+const PET_SAYS = [
+  'Every brave step counts!',
+  'I\'m so proud of you!',
+  'You can do hard things.',
+  'Mistakes help us learn. Even pets know that!',
+  'Shall we do some flower breathing together?',
+  'Thank you for looking after me!',
+  'You\'re a great friend to me.',
+  'Want to try a brave step today?'
+];

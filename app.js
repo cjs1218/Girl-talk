@@ -4,7 +4,7 @@
 /* ---------- Helpers ---------- */
 const app = document.getElementById('app');
 const KEY = 'girltalk-v1';
-const DEFAULTS = { setup:false, name:'', avatar:'🦄', stars:0, earned:{}, strengths:[], ladderDone:[], customSteps:[], feelings:[], goals:[], worries:[] };
+const DEFAULTS = { setup:false, name:'', avatar:'🦄', stars:0, earned:{}, strengths:[], ladderDone:[], customSteps:[], feelings:[], goals:[], worries:[], spent:0, pet:null, owned:[], food:{}, home:'box', wear:null };
 
 function loadState(){ try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ return {}; } }
 let S = Object.assign(JSON.parse(JSON.stringify(DEFAULTS)), loadState());
@@ -25,7 +25,8 @@ let timers = [];
 function later(fn, ms){ const t = setTimeout(fn, ms); timers.push(t); return t; }
 function stopTimers(){ timers.forEach(clearTimeout); timers = []; try { speechSynthesis.cancel(); } catch(e){} }
 
-function updateStars(){ document.getElementById('starcount').textContent = S.stars; }
+const wallet = () => Math.max(0, S.stars - S.spent);
+function updateStars(){ document.getElementById('starcount').textContent = wallet(); }
 function bumpStar(){ const el = document.getElementById('starbox'); el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
 
 let toastT;
@@ -77,6 +78,7 @@ document.getElementById('back').addEventListener('click', () => { if (backTo) lo
 
 const routes = {
   'home': home, 'setup': setup, 'grownups': grownups,
+  'pet': petRoom, 'pet/adopt': petAdopt, 'pet/shop': petShop,
   'brave': braveHub, 'brave/strengths': strengths, 'brave/ladder': ladder, 'brave/selftalk': selfTalk,
   'calm': calmHub, 'calm/feelings': feelings, 'calm/breathe': breathe, 'calm/squeeze': squeeze,
   'calm/senses': senses, 'calm/worry': worry, 'calm/diary': diary,
@@ -129,6 +131,7 @@ function home(){
       <div><h1>Hi${S.name ? ' ' + esc(S.name) : ''}!</h1><p>${g}</p></div>
     </section>
     <a class="checkin" href="#/calm/feelings">How are you feeling today? <span>→</span></a>
+    ${petBanner()}
     <div class="islands">
       ${ISLANDS.map(i => `<a class="island ${i.id}" href="#/${i.id}"><span class="isl-emoji">${i.emoji}</span><span class="isl-name">${i.name}</span><span class="isl-sub">${i.sub}</span></a>`).join('')}
     </div>
@@ -849,6 +852,7 @@ function grownups(){
     <div class="card gu">
       <h2>About Girl Talk</h2>
       <p>Girl Talk helps girls of about 8 to 10 build confidence, manage big feelings, set goals and handle tricky friendships. It works best when you explore it <b>together</b>: 10 minutes a few times a week, letting her lead.</p>
+      <p><b>Stars and pet:</b> she earns stars for <i>trying</i> activities, not for getting answers right, and spends them on a pet and things for its home. The pet never gets ill, sad or runs away if she doesn't visit, so there's no guilt pulling her back.</p>
       <p><b>Privacy:</b> there are no accounts, no messaging and no tracking. Everything she enters is saved only on this device, in this browser.</p>
     </div>
     <div class="card gu">
@@ -887,6 +891,183 @@ function grownups(){
     try { localStorage.removeItem(KEY); } catch(err){}
     S = JSON.parse(JSON.stringify(DEFAULTS)); updateStars(); location.hash = '#/setup'; route();
   };
+}
+
+
+/* ---------- My Pet ---------- */
+const petType = () => S.pet && PETS.find(p => p.id === S.pet.type);
+const findItem = id => [...HOMES, ...FURNITURE, ...TOYS, ...FOOD, ...ACCESSORIES].find(i => i.id === id);
+
+function petBanner(){
+  if (S.pet){
+    const t = petType();
+    return `<a class="petbanner" href="#/pet"><span class="pb-pet">${t.e}</span><span><b>Visit ${esc(S.pet.name)}</b><small>You have ${wallet()} ⭐ to spend</small></span><span class="pb-go">→</span></a>`;
+  }
+  const need = Math.max(0, ADOPT_COST - wallet());
+  return `<a class="petbanner" href="#/pet/adopt"><span class="pb-pet">🐾</span><span><b>Adopt a pet!</b><small>${need ? `Earn ${need} more ⭐ by trying activities` : 'You have enough stars. Pick your pet!'}</small></span><span class="pb-go">→</span></a>`;
+}
+
+function spend(cost){
+  if (wallet() < cost){ toast(`You need ${cost - wallet()} more ⭐`); return false; }
+  S.spent += cost; save(); bumpStar(); return true;
+}
+
+function petAdopt(){
+  if (S.pet){ location.hash = '#/pet'; return; }
+  setTop('Adopt a pet', '#/home', 'friends');
+  let pick = null;
+  const choose = () => {
+    const w = wallet();
+    view(`
+      <div class="bigemoji">🐾</div>
+      <p class="intro center">Collect stars by trying the activities. Then spend them on a pet friend and things for its home!</p>
+      ${w < ADOPT_COST ? `<div class="card center"><p><b>You have ${w} of ${ADOPT_COST} ⭐</b></p><div class="progress"><i style="width:${Math.round(w/ADOPT_COST*100)}%"></i></div><a class="btn" href="#/home">Earn stars</a></div>` : ''}
+      <div class="chips">${PETS.map(p => { const c = p.cost || ADOPT_COST;
+        return `<button class="chip" data-id="${p.id}" ${w < c ? 'disabled style="opacity:.5"' : ''}><span class="e">${p.e}</span>${p.name}<small class="price">${c} ⭐</small></button>`; }).join('')}</div>
+    `);
+    $$('.chip').forEach(b => b.onclick = () => { pick = PETS.find(p => p.id === b.dataset.id); name(); });
+  };
+  const name = () => {
+    view(`
+      <div class="bigemoji" style="font-size:96px">${pick.e}</div>
+      <h2 class="center">What will you call your ${pick.name.toLowerCase()}?</h2>
+      <input id="pn" maxlength="16" placeholder="Pet name" autocomplete="off">
+      <div class="examples">${shuffle(PET_NAMES).slice(0,6).map(n => `<button>${n}</button>`).join('')}</div>
+      <div class="row" style="margin-top:12px"><button class="btn ghost" id="bk">← Back</button><button class="btn" id="ad">Adopt for ${pick.cost || ADOPT_COST} ⭐</button></div>
+    `);
+    $$('.examples button').forEach(b => b.onclick = () => { $('#pn').value = b.textContent; });
+    $('#bk').onclick = choose;
+    $('#ad').onclick = () => {
+      const n = $('#pn').value.trim();
+      if (!n){ toast('Give your pet a name first!'); return; }
+      if (!spend(pick.cost || ADOPT_COST)) return;
+      S.pet = { type: pick.id, name: n, since: dkey(), fed: null };
+      S.home = 'box';
+      S.food[pick.fav] = (S.food[pick.fav] || 0) + 2;  // welcome gift
+      save(); confetti();
+      toast(`Welcome home, ${n}! 🎁 2 free snacks`);
+      location.hash = '#/pet';
+    };
+  };
+  choose();
+}
+
+function petRoom(){
+  if (!S.pet){ location.hash = '#/pet/adopt'; return; }
+  const t = petType(), home = HOMES.find(h => h.id === S.home) || HOMES[0];
+  setTop(S.pet.name, '#/home', 'friends');
+  const fedToday = S.pet.fed === dkey();
+  let say = !fedToday ? `Hi ${S.name || 'friend'}! I'm a little bit peckish… 🍽️` : `Hi ${S.name || 'friend'}! I'm so happy you came!`;
+  const acc = ACCESSORIES.find(a => a.id === S.wear);
+  view(`
+    <div class="bubble" id="say">${esc(say)}</div>
+    <div class="room" style="--wall:${home.wall};--floor:${home.floor}">
+      ${FURNITURE.filter(f => S.owned.includes(f.id)).map(f => `<span class="it" style="left:${f.x}%;top:${f.y}%">${f.e}</span>`).join('')}
+      ${TOYS.filter(f => S.owned.includes(f.id)).map(f => `<button class="it toy" data-id="${f.id}" style="left:${f.x}%;top:${f.y}%" aria-label="Play with ${f.name}">${f.e}</button>`).join('')}
+      <button class="petwrap" id="pet" aria-label="Stroke ${esc(S.pet.name)}"><span class="pet">${t.e}</span>${acc ? `<span class="acc ${acc.where}">${acc.e}</span>` : ''}</button>
+      <span class="homelabel">${home.e} ${home.name}</span>
+    </div>
+    <div class="tray" id="tray">
+      ${FOOD.filter(f => S.food[f.id] > 0).map(f => `<button class="food" data-id="${f.id}" aria-label="Feed ${f.name}">${f.e}<b>${S.food[f.id]}</b></button>`).join('') || '<span class="muted">No food yet. Buy some in the shop!</span>'}
+    </div>
+    <p class="muted center" style="font-size:15px;margin-top:-4px">Tap ${esc(S.pet.name)} for a cuddle, tap food to feed, tap toys to play.</p>
+    <div class="row"><a class="btn" href="#/pet/shop">🛍️ Shop</a><a class="btn ghost" href="#/home">⭐ Earn stars</a></div>
+  `);
+  const pw = $('#pet'), bubble = $('#say');
+  const talk = (txt) => { bubble.textContent = txt; bubble.classList.remove('pop'); void bubble.offsetWidth; bubble.classList.add('pop'); };
+  const jump = () => { pw.classList.remove('jump'); void pw.offsetWidth; pw.classList.add('jump'); };
+  const hearts = (n=3, e='💖') => {
+    for (let i=0;i<n;i++){ const h = document.createElement('span'); h.className = 'heart'; h.textContent = e;
+      h.style.left = (44 + Math.random()*12) + '%'; h.style.animationDelay = (i*0.15) + 's';
+      $('.room').appendChild(h); setTimeout(() => h.remove(), 1600); }
+  };
+  pw.onclick = () => {
+    const mine = STRENGTHS.filter(s => S.strengths.includes(s.id));
+    const lines = [...PET_SAYS];
+    if (mine.length) lines.push(`I think you're really ${mine[Math.floor(Math.random()*mine.length)].name.toLowerCase()}!`);
+    talk(lines[Math.floor(Math.random()*lines.length)]); jump(); hearts();
+  };
+  $$('.toy').forEach(b => b.onclick = () => {
+    const toy = TOYS.find(x => x.id === b.dataset.id);
+    b.classList.remove('spin'); void b.offsetWidth; b.classList.add('spin');
+    talk(toy.say); jump(); hearts(2, '✨');
+  });
+  $$('.food').forEach(b => b.onclick = () => {
+    const f = FOOD.find(x => x.id === b.dataset.id);
+    S.food[f.id]--; S.pet.fed = dkey(); save();
+    const fav = f.id === t.fav;
+    const bite = document.createElement('span'); bite.className = 'eat'; bite.textContent = f.e; $('.room').appendChild(bite);
+    setTimeout(() => bite.remove(), 1000);
+    talk(fav ? `${f.name}! My FAVOURITE! Thank you! 😋` : `Yum yum, thank you! 😋`); jump(); hearts(fav ? 5 : 2, fav ? '💖' : '😋');
+    later(() => { const n = S.food[f.id]; if (n > 0) b.querySelector('b').textContent = n; else b.remove();
+      if (!$('#tray .food')) $('#tray').innerHTML = '<span class="muted">All gone! Buy more in the shop.</span>'; }, 300);
+  });
+}
+
+function petShop(){
+  if (!S.pet){ location.hash = '#/pet/adopt'; return; }
+  setTop('Pet shop', '#/pet', 'friends');
+  const tabs = [
+    { id:'homes', name:'🏡 Homes', items:HOMES },
+    { id:'furniture', name:'🛋️ Furniture', items:FURNITURE },
+    { id:'toys', name:'⚽ Toys', items:TOYS },
+    { id:'food', name:'🍎 Food', items:FOOD },
+    { id:'wear', name:'🎀 Dress up', items:ACCESSORIES }
+  ];
+  let tab = 'homes';
+  const t = petType();
+  const draw = () => {
+    const cur = tabs.find(x => x.id === tab);
+    const w = wallet();
+    view(`
+      <div class="wallet">You have <b>${w} ⭐</b> to spend</div>
+      <div class="tabs">${tabs.map(x => `<button class="tab ${x.id===tab?'on':''}" data-t="${x.id}">${x.name}</button>`).join('')}</div>
+      <div class="shop">${cur.items.map(i => {
+        let btn, note = '';
+        if (tab === 'food'){
+          note = `<small>You have ${S.food[i.id] || 0}${i.id === t.fav ? ' · ' + esc(S.pet.name) + '\'s favourite!' : ''}</small>`;
+          btn = `<button class="buy" data-id="${i.id}" ${w < i.cost ? 'disabled' : ''}>Buy ${i.cost} ⭐</button>`;
+        } else if (tab === 'homes'){
+          const own = i.cost === 0 || S.owned.includes(i.id);
+          btn = S.home === i.id ? `<button class="buy using" disabled>Living here</button>`
+              : own ? `<button class="buy use" data-id="${i.id}">Move in</button>`
+              : `<button class="buy" data-id="${i.id}" ${w < i.cost ? 'disabled' : ''}>Buy ${i.cost} ⭐</button>`;
+        } else if (tab === 'wear'){
+          const own = S.owned.includes(i.id);
+          btn = S.wear === i.id ? `<button class="buy using" data-id="${i.id}">Take off</button>`
+              : own ? `<button class="buy use" data-id="${i.id}">Wear it</button>`
+              : `<button class="buy" data-id="${i.id}" ${w < i.cost ? 'disabled' : ''}>Buy ${i.cost} ⭐</button>`;
+        } else {
+          btn = S.owned.includes(i.id) ? `<button class="buy using" disabled>In the room ✓</button>`
+              : `<button class="buy" data-id="${i.id}" ${w < i.cost ? 'disabled' : ''}>Buy ${i.cost} ⭐</button>`;
+        }
+        return `<div class="shopitem"><span class="se">${i.e}</span><b>${esc(i.name)}</b>${note}${btn}</div>`;
+      }).join('')}</div>
+      <a class="btn block" href="#/pet" style="margin-top:8px">Back to ${esc(S.pet.name)}</a>
+    `);
+    $$('.tab').forEach(b => b.onclick = () => { tab = b.dataset.t; draw(); });
+    $$('.buy[data-id]').forEach(b => b.onclick = () => {
+      const i = findItem(b.dataset.id);
+      if (tab === 'food'){
+        if (spend(i.cost)){ S.food[i.id] = (S.food[i.id] || 0) + 1; save(); toast(`${i.e} Added to the food tray`); }
+      } else if (tab === 'homes'){
+        if (S.owned.includes(i.id) || i.cost === 0 || spend(i.cost)){
+          if (!S.owned.includes(i.id)) S.owned.push(i.id);
+          S.home = i.id; save(); confetti(); toast(`${i.e} ${S.pet.name} moved into the ${i.name.toLowerCase()}!`);
+        }
+      } else if (tab === 'wear'){
+        if (S.wear === i.id){ S.wear = null; save(); }
+        else if (S.owned.includes(i.id) || spend(i.cost)){
+          if (!S.owned.includes(i.id)) S.owned.push(i.id);
+          S.wear = i.id; save(); toast(`${i.e} Looking good, ${S.pet.name}!`);
+        }
+      } else if (spend(i.cost)){
+        S.owned.push(i.id); save(); toast(`${i.e} Added to ${S.pet.name}'s room!`);
+      }
+      draw();
+    });
+  };
+  draw();
 }
 
 /* ---------- Start ---------- */
