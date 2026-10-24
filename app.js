@@ -1114,7 +1114,10 @@ function toggleTick(date, id){
   return i < 0;
 }
 const onDay = (it, dk) => !it.days || it.days.includes(dk);
-const jobsFor = d => JOB_PARTS.flatMap(p => S.routine.jobs[p.id].filter(j => onDay(j, DAY_KEYS[dayIdx(d)])));
+const isSchoolDay = d => dayIdx(d) < 5 && !S.noSchool[dkey(d)];
+const partsFor = d => JOB_PARTS.filter(p => !p.school || isSchoolDay(d));
+const schoolList = key => key === 'school' || (JOB_PARTS.find(p => p.id === key) || {}).school;
+const jobsFor = d => partsFor(d).flatMap(p => S.routine.jobs[p.id].filter(j => onDay(j, DAY_KEYS[dayIdx(d)])));
 
 function todayCount(){
   const d = addDays(0), key = dkey(d);
@@ -1158,7 +1161,7 @@ function week(){
         : `<div class="card muted center">Nothing to pack. Enjoy your day!</div>`}
 
       <h3 style="margin-top:18px">✅ My jobs</h3>
-      ${isToday ? JOB_PARTS.map(p => `<div class="card"><p class="grp">${p.e} ${p.name}</p>
+      ${isToday ? partsFor(d).map(p => `<div class="card"><p class="grp">${p.e} ${p.name}</p>
           ${S.routine.jobs[p.id].filter(j => onDay(j, DAY_KEYS[di])).map(j => checkRow('job:' + j.id, j.e, j.t)).join('') || '<p class="muted" style="margin:0">No jobs here.</p>'}
           ${p.id === 'bedtime' ? '<button class="btn ghost block" id="tmrw" style="margin-top:10px">🎒 Open tomorrow\'s bag</button>' : ''}</div>`).join('')
         : `<div class="card muted center">Jobs are ticked off on the day. Come back ${weekOffset === 1 ? 'tomorrow' : 'on ' + DAY_LONG[di]}!</div>`}
@@ -1189,7 +1192,7 @@ function weekEdit(){
   const R = S.routine;
   const listEditor = (key, items, placeholder) => `
     <div class="elist" data-list="${key}">
-      ${items.map((it, k) => { const dks = key === 'school' ? DAY_KEYS.slice(0,5) : DAY_KEYS; const none = it.days && !it.days.length;
+      ${items.map((it, k) => { const dks = schoolList(key) ? DAY_KEYS.slice(0,5) : DAY_KEYS; const none = it.days && !it.days.length;
         return `<div class="erow"><div class="etext"><span>${esc((it.e ? it.e + ' ' : '') + it.t)}</span>
           <div class="daychips">${dks.map(dk => `<button class="dchip ${onDay(it, dk) ? 'on' : ''}" data-list="${key}" data-k="${k}" data-day="${dk}" aria-label="${DAY_LONG[DAY_KEYS.indexOf(dk)]}">${DAY_LONG[DAY_KEYS.indexOf(dk)].slice(0,2)}</button>`).join('')}</div>
           ${none ? '<small class="warn">Not on any day. Tap a day to turn it on.</small>' : ''}</div>
@@ -1231,7 +1234,7 @@ function weekEdit(){
         <p class="muted" style="margin-top:-4px">Tap the days each thing is needed. Lit-up days are on.</p>
         ${listEditor('school', R.school, 'e.g. Reading book')}
       </div>
-      ${JOB_PARTS.map(p => `<div class="card"><h3>${p.e} ${p.name} jobs</h3>${listEditor(p.id, R.jobs[p.id], 'e.g. Feed the cat')}</div>`).join('')}
+      ${JOB_PARTS.map(p => `<div class="card"><h3>${p.e} ${p.name} jobs</h3>${p.school ? '<p class="muted" style="margin-top:-4px">Only on school days.</p>' : ''}${listEditor(p.id, R.jobs[p.id], 'e.g. Feed the cat')}</div>`).join('')}
       <div class="card">
         <h3>Start again</h3>
         <button class="btn ghost block" id="resetweek">Go back to the example week</button>
@@ -1279,7 +1282,7 @@ function weekEdit(){
     const partEmoji = { morning:'☀️', after:'🏠', bedtime:'🌙' };
     $$('.dchip').forEach(b => b.onclick = () => {
       const it = listOf(b.dataset.list)[+b.dataset.k], dk = b.dataset.day;
-      const all = b.dataset.list === 'school' ? DAY_KEYS.slice(0,5) : DAY_KEYS;
+      const all = schoolList(b.dataset.list) ? DAY_KEYS.slice(0,5) : DAY_KEYS;
       let days = it.days ? it.days.slice() : all.slice();
       days = days.includes(dk) ? days.filter(x => x !== dk) : [...days, dk];
       if (all.every(x => days.includes(x))) delete it.days; else it.days = all.filter(x => days.includes(x));

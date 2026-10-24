@@ -465,7 +465,7 @@ const ROUTINE_DEFAULT = {
 
 const JOB_PARTS = [
   { id:'morning', e:'☀️', name:'Morning' },
-  { id:'after',   e:'🏠', name:'After school' },
+  { id:'after',   e:'🏠', name:'After school', school:true },  // only on school days
   { id:'bedtime', e:'🌙', name:'Bedtime' }
 ];
 
