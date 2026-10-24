@@ -588,7 +588,11 @@ function goalView(params){
       save(); draw();
     });
     if ($('#achieved')) $('#achieved').onclick = () => { g.done = true; save(); award('goal-done-' + g.id, 5, 'Goal achieved!'); confetti(); draw(); };
-    $('#del').onclick = () => { if (confirm('Delete this goal?')){ S.goals = S.goals.filter(x => x !== g); save(); location.hash = '#/goals'; } };
+    $('#del').onclick = (e) => {
+      const b = e.currentTarget;
+      if (!b.dataset.sure){ b.dataset.sure = '1'; b.textContent = 'Tap again to delete'; return; }
+      S.goals = S.goals.filter(x => x !== g); save(); location.hash = '#/goals';
+    };
   };
   draw();
 }
@@ -877,11 +881,11 @@ function grownups(){
       <button class="btn ghost block" id="reset">Reset all data</button>
     </div>
   `);
-  $('#reset').onclick = () => {
-    if (confirm('Delete everything saved in Girl Talk on this device?')){
-      try { localStorage.removeItem(KEY); } catch(e){}
-      S = JSON.parse(JSON.stringify(DEFAULTS)); updateStars(); location.hash = '#/setup'; route();
-    }
+  $('#reset').onclick = (e) => {
+    const b = e.currentTarget;
+    if (!b.dataset.sure){ b.dataset.sure = '1'; b.textContent = 'Tap again to delete everything'; return; }
+    try { localStorage.removeItem(KEY); } catch(err){}
+    S = JSON.parse(JSON.stringify(DEFAULTS)); updateStars(); location.hash = '#/setup'; route();
   };
 }
 
