@@ -1197,9 +1197,10 @@ function weekEdit(){
         ${clubs.map((c,k) => `
           <div class="clubedit">
             <div class="row">
-              <select data-c="${k}" data-f="e" aria-label="Picture" style="flex:none;width:76px">${CLUB_EMOJI.map(e => `<option ${e===c.e?'selected':''}>${e}</option>`).join('')}</select>
-              <input data-c="${k}" data-f="name" value="${esc(c.name)}" maxlength="30" placeholder="Club name" style="flex:1;min-width:0">
+              <select data-c="${k}" data-f="e" aria-label="Activity" style="flex:1;min-width:0">${CLUB_EMOJI.map(o => `<option value="${o.e}" ${o.e===c.e?'selected':''}>${o.e} ${o.name}</option>`).join('')}</select>
             </div>
+            <label class="lbl">Name</label>
+            <input data-c="${k}" data-f="name" value="${esc(c.name)}" maxlength="30" placeholder="Club name">
             <label class="lbl">Time (optional)</label>
             <div class="row timepick">
               <select data-c="${k}" data-t="h" aria-label="Hour"><option value="">No time</option>${[...Array(16)].map((_,n) => { const h = pad(n+6); return `<option value="${h}" ${c.time.slice(0,2)===h?'selected':''}>${fmtHour(n+6)}</option>`; }).join('')}</select>
@@ -1226,6 +1227,15 @@ function weekEdit(){
     $$('.tab[data-d]').forEach(b => b.onclick = () => { day = +b.dataset.d; draw(); });
     $$('[data-c][data-f]').forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => {
       const c = clubs[+el.dataset.c], f = el.dataset.f;
+      if (f === 'e'){
+        const was = CLUB_EMOJI.find(o => o.e === c.e), now = CLUB_EMOJI.find(o => o.e === el.value);
+        c.e = el.value;
+        if (now){
+          if (!c.name.trim() || (was && c.name === was.name)) c.name = now.name;
+          if (!c.bag.length || (was && c.bag.join('|') === was.bag.join('|'))) c.bag = now.bag.slice();
+        }
+        save(); draw(); return;
+      }
       c[f] = f === 'bag' ? el.value.split('\n').map(x => x.trim()).filter(Boolean) : el.value;
       save();
       if (f === 'e') draw();
@@ -1239,7 +1249,7 @@ function weekEdit(){
       if (!b.dataset.sure){ b.dataset.sure = '1'; b.textContent = 'Tap again to remove'; return; }
       clubs.splice(+b.dataset.c, 1); save(); draw();
     });
-    $('#addclub').onclick = () => { clubs.push({ id: uid(), e: CLUB_EMOJI[0], name: '', time: '', bag: [] }); save(); draw();
+    $('#addclub').onclick = () => { clubs.push({ id: uid(), e: CLUB_EMOJI[0].e, name: CLUB_EMOJI[0].name, time: '', bag: CLUB_EMOJI[0].bag.slice() }); save(); draw();
       const ins = $$('.clubedit input[data-f=name]'); ins[ins.length-1].focus(); };
     const listOf = key => key === 'school' ? R.school : R.jobs[key];
     const partEmoji = { morning:'☀️', after:'🏠', bedtime:'🌙' };

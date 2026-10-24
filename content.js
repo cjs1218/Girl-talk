@@ -398,7 +398,35 @@ const PET_SAYS = [
 // Example week. Everything here can be changed in the app ("Change my week").
 // Days: mon tue wed thu fri sat sun. School items are packed Mon–Fri.
 
-const CLUB_EMOJI = ['🏊','💃','⚽','🎹','🎻','🧭','🥋','🤸','🎨','🐴','🎾','🏃','🎭','📚','🧑‍🍳','🏸','🛼','⛸️','🎤','🧩','⛪','👵'];
+// Picking a picture fills in the club name and a starter kit list (if those are empty or still the old suggestion)
+const CLUB_EMOJI = [
+  { e:'🏊', name:'Swimming', bag:['Swimming costume','Towel','Goggles','Hairbrush'] },
+  { e:'💃', name:'Dance', bag:['Leotard','Dance shoes','Hair bobble','Water bottle'] },
+  { e:'🤸', name:'Gymnastics', bag:['Leotard','Hair bobble','Water bottle'] },
+  { e:'⚽', name:'Football', bag:['Football kit','Shin pads','Football boots','Water bottle'] },
+  { e:'🏀', name:'Netball', bag:['Netball kit','Trainers','Water bottle'] },
+  { e:'🎾', name:'Tennis', bag:['Tennis racket','Trainers','Water bottle'] },
+  { e:'🏸', name:'Badminton', bag:['Badminton racket','Trainers','Water bottle'] },
+  { e:'🥋', name:'Karate', bag:['Karate suit','Belt','Water bottle'] },
+  { e:'🐴', name:'Horse riding', bag:['Riding hat','Jodhpurs','Riding boots','Gloves'] },
+  { e:'🛼', name:'Roller skating', bag:['Roller skates','Helmet','Knee pads'] },
+  { e:'⛸️', name:'Ice skating', bag:['Gloves','Warm jumper','Hat'] },
+  { e:'🏃', name:'PE at school', bag:['PE kit','Trainers','Hair bobble'] },
+  { e:'🧘', name:'Yoga', bag:['Comfy clothes','Water bottle'] },
+  { e:'🎹', name:'Piano', bag:['Piano book'] },
+  { e:'🎻', name:'Violin', bag:['Violin','Music book'] },
+  { e:'🎶', name:'Music lesson', bag:['Instrument','Music book'] },
+  { e:'🎤', name:'Choir', bag:['Song folder','Water bottle'] },
+  { e:'🎭', name:'Drama', bag:['Script','Water bottle'] },
+  { e:'🎨', name:'Art club', bag:['Apron'] },
+  { e:'🧑‍🍳', name:'Cooking club', bag:['Apron','Container to bring food home'] },
+  { e:'♟️', name:'Chess club', bag:[] },
+  { e:'📚', name:'Library', bag:['Library book'] },
+  { e:'🧭', name:'Brownies', bag:['Brownies uniform','Subs money'] },
+  { e:'⛪', name:'Church', bag:[] },
+  { e:'👵', name:'Visit Grandma', bag:[] },
+  { e:'🎉', name:'Party', bag:['Present','Card'] }
+];
 
 const ROUTINE_DEFAULT = {
   clubs: {
