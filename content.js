@@ -483,14 +483,27 @@ const GIG_SUGGESTIONS = [
     { e:'🚿', t:'Wipe the bathroom sink', pay:0.40 },
     { e:'♻️', t:'Sort the recycling', pay:0.30 },
     { e:'🛒', t:'Help unpack the shopping', pay:0.30 },
-    { e:'🧸', t:'Sort old toys to give to charity', pay:1.00 }
+    { e:'🧸', t:'Sort old toys to give to charity', pay:1.00 },
+    { e:'🪶', t:'Dust the living room', pay:0.40 },
+    { e:'👟', t:'Clean and polish the shoes', pay:0.50 },
+    { e:'🚪', t:'Wipe the door handles and light switches', pay:0.30 },
+    { e:'🗑️', t:'Help put the bins out (with a grown-up)', pay:0.30 },
+    { e:'🚙', t:'Clear the crumbs and rubbish out of the car', pay:0.75 },
+    { e:'🪙', t:'Count and sort the coin jar', pay:0.30 }
   ]},
   { cat:'Kitchen', list:[
     { e:'🍽️', t:'Lay and clear the table', pay:0.30 },
     { e:'🧽', t:'Help wash up after dinner', pay:0.50 },
     { e:'🥗', t:'Help cook dinner', pay:0.50 },
     { e:'🧁', t:'Bake something with a grown-up', pay:0.50 },
-    { e:'🍳', t:'Make a grown-up breakfast in bed', pay:1.00 }
+    { e:'🍳', t:'Make a grown-up breakfast in bed', pay:1.00 },
+    { e:'🥡', t:'Empty the dishwasher', pay:0.30 },
+    { e:'🧻', t:'Wipe the kitchen table and counters', pay:0.20 },
+    { e:'🥪', t:'Make my own packed lunch', pay:0.30 },
+    { e:'🍓', t:'Make a fruit salad for pudding', pay:0.50 },
+    { e:'📝', t:'Write the shopping list with a grown-up', pay:0.20 },
+    { e:'📅', t:'Check the fridge for out-of-date food', pay:0.20 },
+    { e:'👩‍🍳', t:'Plan a family meal and help cook it', pay:1.00 }
   ]},
   { cat:'Garden and outdoors', list:[
     { e:'🚗', t:'Help wash the car', pay:1.00 },
@@ -498,7 +511,13 @@ const GIG_SUGGESTIONS = [
     { e:'🌼', t:'Pull up weeds', pay:0.75 },
     { e:'🌱', t:'Water the plants', pay:0.20 },
     { e:'🥕', t:'Plant some seeds and look after them', pay:0.50 },
-    { e:'🗑️', t:'Pick up litter on a walk (with gloves)', pay:0.50 }
+    { e:'🗑️', t:'Pick up litter on a walk (with gloves)', pay:0.50 },
+    { e:'🧹', t:'Sweep the path or patio', pay:0.50 },
+    { e:'🚲', t:'Wash the bikes', pay:0.75 },
+    { e:'🪑', t:'Wash the garden furniture', pay:0.75 },
+    { e:'🐦', t:'Fill up the bird feeder', pay:0.20 },
+    { e:'🍎', t:'Pick fruit or vegetables from the garden', pay:0.30 },
+    { e:'👚', t:'Bring in the washing from the line and fold it', pay:0.40 }
   ]},
   { cat:'Pets', list:[
     { e:'🐕', t:'Walk the dog with a grown-up', pay:0.50 },
@@ -510,7 +529,26 @@ const GIG_SUGGESTIONS = [
     { e:'🧮', t:'15 minutes of times tables', pay:0.30 },
     { e:'✍️', t:'Write a thank-you card', pay:0.30 },
     { e:'🎂', t:'Make a birthday card for family', pay:0.30 },
-    { e:'🤝', t:'Help a neighbour (with a grown-up)', pay:1.00 }
+    { e:'🤝', t:'Help a neighbour (with a grown-up)', pay:1.00 },
+    { e:'🎹', t:'15 minutes of extra instrument practice', pay:0.30 },
+    { e:'🔤', t:'Learn to spell 10 tricky words', pay:0.30 },
+    { e:'🪡', t:'Learn to sew on a button (with a grown-up)', pay:0.50 },
+    { e:'📖', t:'Write and illustrate a short story', pay:0.50 },
+    { e:'👶', t:'Read a book to a younger brother, sister or cousin', pay:0.30 }
+  ]},
+  { cat:'My bedroom', list:[
+    { e:'🛏️', t:'Change my bed sheets (with help)', pay:0.50 },
+    { e:'🧽', t:'Tidy and dust my whole bedroom', pay:0.50 },
+    { e:'📚', t:'Sort out my bookshelf', pay:0.30 },
+    { e:'👗', t:'Sort clothes that are too small to give away', pay:1.00 },
+    { e:'🧩', t:'Check games and puzzles have all their pieces', pay:0.50 }
+  ]},
+  { cat:'Little business ideas', list:[
+    { e:'🔖', t:'Make bookmarks or cards to sell to family', pay:0.50 },
+    { e:'📰', t:'Make a family newsletter', pay:0.50 },
+    { e:'📱', t:'Teach Grandma or Grandad something on their phone', pay:0.50 },
+    { e:'🧽', t:'Wash a neighbour\'s car (with a grown-up)', pay:1.50 },
+    { e:'🏷️', t:'Get old toys ready for a car boot sale', pay:1.00 }
   ]}
 ];
 
