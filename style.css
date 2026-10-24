@@ -13,6 +13,7 @@
 body.t-brave{--accent:var(--brave);--accent-soft:var(--brave-soft)}
 body.t-calm{--accent:var(--calm);--accent-soft:var(--calm-soft)}
 body.t-goals{--accent:var(--goals);--accent-soft:var(--goals-soft)}
+body.t-money{--accent:#1f8f5f;--accent-soft:#dcf5e8}
 body.t-week{--accent:#2f72c8;--accent-soft:#e1edfb}
 body.t-friends{--accent:var(--friends);--accent-soft:var(--friends-soft)}
 
@@ -274,3 +275,22 @@ label.lbl{display:block;font-weight:800;margin:14px 0 6px}
 .dchip{border:2px solid var(--line);background:#fff;color:var(--muted);border-radius:999px;min-width:36px;height:30px;padding:0 6px;font:800 13px 'Nunito',sans-serif;cursor:pointer}
 .dchip.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .warn{color:var(--bad);font-weight:700}
+
+/* ---------- Pocket money ---------- */
+.moneypill{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid #cdeedd;border-radius:999px;padding:10px 16px;margin:0 0 14px;text-decoration:none;color:var(--ink);font-weight:800;box-shadow:var(--shadow)}
+.moneypill span:first-child{flex:1}
+.moneypill b{color:#1f8f5f;font-size:18px}
+.moneycard{padding-block:22px}
+.bigmoney{font-family:'Fredoka',sans-serif;font-size:52px;font-weight:600;color:#1f8f5f;line-height:1.1;margin:4px 0 8px;font-variant-numeric:tabular-nums}
+.tagp{border-radius:999px;padding:6px 12px;font-weight:800;font-size:14px;white-space:nowrap;flex:none}
+.tagp.wait{background:var(--ok-soft);color:var(--ok)}
+.tagp.ok{background:var(--good-soft);color:var(--good)}
+.tagp.no{background:var(--bad-soft);color:var(--bad)}
+.entry b.pos{color:var(--good);font-variant-numeric:tabular-nums}
+.entry b.neg{color:var(--bad);font-variant-numeric:tabular-nums}
+.rv{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-weight:700;cursor:pointer}
+.rv input{width:24px;height:24px;accent-color:var(--good);flex:none}
+.rv span{flex:1;min-width:0}
+.paysum{margin:12px 0;font-weight:700}
+.payin{width:96px;flex:none}
+.addgig{border:0;background:var(--accent);color:#fff;width:38px;height:38px;border-radius:50%;font-size:22px;font-weight:800;cursor:pointer;flex:none}

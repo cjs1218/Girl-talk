@@ -471,3 +471,48 @@ const JOB_PARTS = [
 
 // Pictures to choose from for "My own club"
 const OWN_EMOJI = ['⭐','🏃‍♀️','🚴‍♀️','🌳','🏞️','🐕','🧗‍♀️','🎳','🏓','🏐','⛳','🏄‍♀️','🎣','🎮','🧶','🎸','🥁','🎺','🪴','🐾','🧪','🔭','🏕️','🎬','🧁','🛝','👯‍♀️','📝','🧩','🫶'];
+
+/* ---------- Pocket money ---------- */
+// Suggested bonus jobs ("gigs") a grown-up can choose from. Prices are only suggestions.
+const GIG_SUGGESTIONS = [
+  { cat:'Around the house', list:[
+    { e:'👕', t:'Fold and put away the washing', pay:0.50 },
+    { e:'🧦', t:'Pair up all the socks', pay:0.30 },
+    { e:'🧹', t:'Hoover a room', pay:0.50 },
+    { e:'🪞', t:'Clean the mirrors', pay:0.30 },
+    { e:'🚿', t:'Wipe the bathroom sink', pay:0.40 },
+    { e:'♻️', t:'Sort the recycling', pay:0.30 },
+    { e:'🛒', t:'Help unpack the shopping', pay:0.30 },
+    { e:'🧸', t:'Sort old toys to give to charity', pay:1.00 }
+  ]},
+  { cat:'Kitchen', list:[
+    { e:'🍽️', t:'Lay and clear the table', pay:0.30 },
+    { e:'🧽', t:'Help wash up after dinner', pay:0.50 },
+    { e:'🥗', t:'Help cook dinner', pay:0.50 },
+    { e:'🧁', t:'Bake something with a grown-up', pay:0.50 },
+    { e:'🍳', t:'Make a grown-up breakfast in bed', pay:1.00 }
+  ]},
+  { cat:'Garden and outdoors', list:[
+    { e:'🚗', t:'Help wash the car', pay:1.00 },
+    { e:'🍂', t:'Sweep or rake the leaves', pay:1.00 },
+    { e:'🌼', t:'Pull up weeds', pay:0.75 },
+    { e:'🌱', t:'Water the plants', pay:0.20 },
+    { e:'🥕', t:'Plant some seeds and look after them', pay:0.50 },
+    { e:'🗑️', t:'Pick up litter on a walk (with gloves)', pay:0.50 }
+  ]},
+  { cat:'Pets', list:[
+    { e:'🐕', t:'Walk the dog with a grown-up', pay:0.50 },
+    { e:'🐾', t:'Help clean out the pet\'s cage or bed', pay:1.00 },
+    { e:'🥣', t:'Feed the pet without being reminded', pay:0.20 }
+  ]},
+  { cat:'Learning and kindness', list:[
+    { e:'📚', t:'Finish a whole book', pay:1.00 },
+    { e:'🧮', t:'15 minutes of times tables', pay:0.30 },
+    { e:'✍️', t:'Write a thank-you card', pay:0.30 },
+    { e:'🎂', t:'Make a birthday card for family', pay:0.30 },
+    { e:'🤝', t:'Help a neighbour (with a grown-up)', pay:1.00 }
+  ]}
+];
+
+const PAY_STEPS = [0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.50, 1.00];
+const CURRENCIES = [{ c:'£', minor:'p' }, { c:'€', minor:'c' }, { c:'$', minor:'¢' }];

@@ -11,6 +11,7 @@ let S = Object.assign(JSON.parse(JSON.stringify(DEFAULTS)), loadState());
 if (!S.routine) S.routine = JSON.parse(JSON.stringify(ROUTINE_DEFAULT));
 S.routine.school = S.routine.school.map(x => typeof x === 'string' ? { t:x } : x);
 if (!S.ticks) S.ticks = {};
+S.money = Object.assign({ rate:0.10, dayBonus:0.20, cur:'£', gigs:[], pin:'', ledger:[], reviewed:{}, gigLog:[], goal:null }, S.money || {});
 if (!S.noSchool) S.noSchool = {};
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} updateStars(); }
 
@@ -82,7 +83,7 @@ document.getElementById('back').addEventListener('click', () => { if (backTo) lo
 
 const routes = {
   'home': home, 'setup': setup, 'grownups': grownups,
-  'week': week, 'week/edit': weekEdit,
+  'week': week, 'week/edit': weekEdit, 'money': money, 'money/parent': moneyParent,
   'pet': petRoom, 'pet/adopt': petAdopt, 'pet/shop': petShop,
   'brave': braveHub, 'brave/strengths': strengths, 'brave/ladder': ladder, 'brave/selftalk': selfTalk,
   'calm': calmHub, 'calm/feelings': feelings, 'calm/breathe': breathe, 'calm/squeeze': squeeze,
@@ -889,6 +890,7 @@ function grownups(){
       <h3>Her week</h3>
       <p>Set up her clubs, what to pack for each one, and her daily jobs. She can change it too.</p>
       <a class="btn block" href="#/week/edit">✏️ Set up her week</a>
+      <a class="btn ghost block" href="#/money/parent" style="margin-top:10px">💷 Pocket money and bonus jobs</a>
     </div>
     <div class="card gu">
       <h3>Reset</h3>
@@ -900,7 +902,7 @@ function grownups(){
     const b = e.currentTarget;
     if (!b.dataset.sure){ b.dataset.sure = '1'; b.textContent = 'Tap again to delete everything'; return; }
     try { localStorage.removeItem(KEY); } catch(err){}
-    S = JSON.parse(JSON.stringify(DEFAULTS)); S.routine = JSON.parse(JSON.stringify(ROUTINE_DEFAULT)); S.ticks = {}; S.noSchool = {}; updateStars(); location.hash = '#/setup'; route();
+    S = JSON.parse(JSON.stringify(DEFAULTS)); S.routine = JSON.parse(JSON.stringify(ROUTINE_DEFAULT)); S.ticks = {}; S.noSchool = {}; S.money = { rate:0.10, dayBonus:0.20, cur:'£', gigs:[], pin:'', ledger:[], reviewed:{}, gigLog:[], goal:null }; updateStars(); location.hash = '#/setup'; route();
   };
 }
 
@@ -1147,6 +1149,7 @@ function week(){
     view(`
       <div class="weekstrip">${[...Array(7)].map((_,n) => { const x = addDays(n), xc = (S.routine.clubs[DAY_KEYS[dayIdx(x)]] || []);
         return `<button class="wd ${n===weekOffset?'on':''}" data-n="${n}"><small>${n===0 ? 'Today' : n===1 ? 'Tmrw' : DAY_LONG[dayIdx(x)].slice(0,3)}</small><b>${x.getDate()}</b><span>${xc.map(c => c.e).join('') || '·'}</span></button>`; }).join('')}</div>
+      <a class="moneypill" href="#/money"><span>💷 Pocket money</span><b>${fmtMoney(balance())}</b><span class="pb-go">→</span></a>
       <h2>${isToday ? 'Today, ' : weekOffset === 1 ? 'Tomorrow, ' : ''}${DAY_LONG[di]} ${d.getDate()} ${d.toLocaleDateString('en-GB',{month:'long'})}</h2>
       ${isToday ? `<div class="card soft"><b>${done} of ${total} done today</b><div class="progress" style="margin-bottom:0"><i style="width:${total ? Math.round(done/total*100) : 0}%"></i></div></div>` : ''}
 
@@ -1173,6 +1176,7 @@ function week(){
     if ($('#ns')) $('#ns').onchange = e => { if (e.target.checked) S.noSchool[key] = true; else delete S.noSchool[key]; save(); draw(); };
     $$('.check').forEach(b => b.onclick = () => {
       const id = b.dataset.id;
+      if (id.startsWith('job:') && rvOf(key).paid.includes(id.slice(4))){ toast('A grown-up has already checked this one ✓'); return; }
       const on = toggleTick(key, id);
       if (on && id.startsWith('job:')) award(`job-${key}-${id}`, 1, 'Job done!');
       if (on && id.startsWith('bag:') && bIds.every(x => ticked(key, 'bag:' + x))) { award(`bag-${key}`, 2, 'Bag all packed!'); }
@@ -1302,6 +1306,229 @@ function weekEdit(){
     };
   };
   draw();
+}
+
+
+/* ---------- Pocket money ---------- */
+const M = () => S.money;
+const minorOf = () => (CURRENCIES.find(c => c.c === M().cur) || CURRENCIES[0]).minor;
+function fmtMoney(x){
+  x = Math.round(x * 100) / 100;
+  const sign = x < 0 ? '−' : '', a = Math.abs(x);
+  if (a > 0 && a < 1) return `${sign}${Math.round(a * 100)}${minorOf()}`;
+  return `${sign}${M().cur}${a.toFixed(2)}`;
+}
+const rvOf = key => { const r = M().reviewed[key]; return r && typeof r === 'object' ? r : { paid: [], bonus: false }; };
+const balance = () => M().ledger.reduce((t, l) => t + l.amt, 0);
+const addLedger = (amt, note, date = dkey()) => M().ledger.unshift({ id: uid(), date, amt: Math.round(amt * 100) / 100, note });
+
+// Days (last 14, up to today) with something for a grown-up to check
+function daysToCheck(){
+  const out = [];
+  for (let n = 0; n > -14; n--){
+    const d = addDays(n), key = dkey(d);
+    const rv = rvOf(key);
+    const jobTicks = (S.ticks[key] || []).filter(t => t.startsWith('job:') && !rv.paid.includes(t.slice(4))).length;
+    const gigs = M().gigLog.filter(g => g.date === key && g.status === 'pending').length;
+    const unpaidToday = n === 0 && jobsFor(d).some(j => !rv.paid.includes(j.id));
+    if (jobTicks || gigs || unpaidToday) out.push({ d, key, jobTicks, gigs });
+  }
+  return out;
+}
+
+function money(){
+  setTop('Pocket money', '#/week', 'money');
+  const today = dkey();
+  const waiting = daysToCheck().reduce((t, x) => t + x.jobTicks + x.gigs, 0);
+  const g = M().goal, bal = balance();
+  view(`
+    <div class="card center moneycard">
+      <p class="muted" style="margin:0">My pocket money</p>
+      <div class="bigmoney">${fmtMoney(bal)}</div>
+      ${waiting ? `<p style="margin:0">⏳ ${waiting} job${waiting === 1 ? '' : 's'} waiting for a grown-up to check</p>` : '<p class="muted" style="margin:0">Everything has been checked ✓</p>'}
+    </div>
+    ${g ? `<div class="card"><p class="grp">🎯 Saving for ${esc(g.name)}</p>
+      <div class="progress"><i style="width:${Math.min(100, Math.round(Math.max(0, bal) / g.amt * 100))}%"></i></div>
+      <p style="margin:-6px 0 0">${fmtMoney(Math.max(0, bal))} of ${fmtMoney(g.amt)}${bal >= g.amt ? ' 🎉 You\'ve saved enough!' : ` · ${fmtMoney(g.amt - Math.max(0, bal))} to go`}</p></div>` : ''}
+
+    <h3>⭐ Bonus jobs</h3>
+    <p class="muted" style="margin-top:-6px">Extra jobs to earn more. Tap "I did it!" and a grown-up will check.</p>
+    ${M().gigs.length ? M().gigs.map(x => {
+      const log = M().gigLog.find(l => l.gid === x.id && l.date === today);
+      const st = !log ? `<button class="buy" data-gig="${x.id}" style="width:auto">I did it!</button>`
+        : log.status === 'pending' ? '<span class="tagp wait">⏳ Waiting</span>'
+        : log.status === 'paid' ? '<span class="tagp ok">✓ Paid</span>' : '<span class="tagp no">Not this time</span>';
+      return `<div class="club"><span class="ce">${x.e}</span><span style="flex:1;min-width:0"><b>${esc(x.t)}</b><small>${fmtMoney(x.pay)}</small></span>${st}</div>`; }).join('')
+      : '<div class="card muted center">No bonus jobs yet. Ask a grown-up to choose some!</div>'}
+
+    <h3 style="margin-top:18px">📒 History</h3>
+    <div class="card">${M().ledger.slice(0, 12).map(l => `<div class="entry"><span style="flex:1;min-width:0"><b>${esc(l.note)}</b><small>${new Date(l.date + 'T12:00').toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' })}</small></span><b class="${l.amt < 0 ? 'neg' : 'pos'}">${l.amt > 0 ? '+' : ''}${fmtMoney(l.amt)}</b></div>`).join('') || '<p class="muted" style="margin:0">Nothing yet. Do your jobs and a grown-up will check them at the end of the day.</p>'}</div>
+
+    <a class="btn ghost block" href="#/money/parent">🔒 Grown-up check</a>
+  `);
+  $$('[data-gig]').forEach(b => b.onclick = () => {
+    const x = M().gigs.find(g => g.id === b.dataset.gig);
+    M().gigLog.unshift({ id: uid(), gid: x.id, e: x.e, t: x.t, pay: x.pay, date: today, status: 'pending' });
+    M().gigLog = M().gigLog.slice(0, 200);
+    save(); award(`gig-${x.id}-${today}`, 1, 'Bonus job done!'); money();
+  });
+}
+
+let parentUnlocked = false;
+function moneyParent(){
+  setTop('Grown-up check', '#/money', 'money');
+  if (!parentUnlocked) return parentGate(moneyParent);
+  const payOpts = sel => PAY_STEPS.map(v => `<option value="${v}" ${Math.abs(v - sel) < 0.001 ? 'selected' : ''}>${v ? fmtMoney(v) : 'Nothing'}</option>`).join('');
+  const chosen = new Set(M().gigs.map(g => g.t));
+  const draw = () => {
+    const days = daysToCheck();
+    view(`
+      <div class="card soft"><p style="margin:0">Check what she's ticked off. Untick anything that wasn't really done, then tap <b>Approve</b> to add it to her pocket money.</p></div>
+      ${days.map(x => {
+        const rv = rvOf(x.key), jobs = jobsFor(x.d).filter(j => !rv.paid.includes(j.id)), ticks = S.ticks[x.key] || [];
+        const gigs = M().gigLog.filter(g => g.date === x.key && g.status === 'pending');
+        return `<div class="card review" data-date="${x.key}">
+          <h3>${x.key === dkey() ? 'Today' : x.d.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'short' })}</h3>
+          ${rv.paid.length ? `<p class="muted" style="margin:0 0 6px">Already paid for ${rv.paid.length} job${rv.paid.length === 1 ? '' : 's'} today ✓</p>` : ''}
+          ${jobs.length ? `<p class="grp">Daily jobs · ${fmtMoney(M().rate)} each</p>${jobs.map(j => `<label class="rv"><input type="checkbox" data-job="${j.id}" ${ticks.includes('job:' + j.id) ? 'checked' : ''}><span>${j.e} ${esc(j.t)}</span></label>`).join('')}` : ''}
+          ${gigs.length ? `<p class="grp">Bonus jobs</p>${gigs.map(g => `<label class="rv"><input type="checkbox" data-glog="${g.id}" checked><span>${g.e} ${esc(g.t)}</span><b>${fmtMoney(g.pay)}</b></label>`).join('')}` : ''}
+          <p class="paysum"></p>
+          <button class="btn block approve">Approve</button>
+        </div>`; }).join('') || '<div class="card muted center">Nothing to check right now.</div>'}
+
+      <div class="card">
+        <h3>💷 Pay settings</h3>
+        <label class="lbl" for="rate" style="margin-top:0">Each daily job pays</label>
+        <select id="rate">${payOpts(M().rate)}</select>
+        <label class="lbl" for="bonus">Extra for doing every job that day</label>
+        <select id="bonus">${payOpts(M().dayBonus)}</select>
+        <label class="lbl" for="cur">Currency</label>
+        <select id="cur">${CURRENCIES.map(c => `<option ${c.c === M().cur ? 'selected' : ''}>${c.c}</option>`).join('')}</select>
+        <p class="muted" style="margin:10px 0 0;font-size:15px">Tip: some families keep everyday jobs unpaid as "family jobs" and only pay for bonus jobs. Set daily jobs to "Nothing" to do that.</p>
+      </div>
+
+      <div class="card">
+        <h3>⭐ Her bonus jobs</h3>
+        ${M().gigs.map((g, k) => `<div class="erow" style="align-items:center"><span style="flex:1;min-width:0">${g.e} ${esc(g.t)}</span>
+          <input class="payin" type="number" inputmode="decimal" min="0" step="0.05" value="${g.pay.toFixed(2)}" data-k="${k}" aria-label="Pay">
+          <button class="del" data-gk="${k}" aria-label="Remove">✕</button></div>`).join('') || '<p class="muted">None chosen yet. Add some below.</p>'}
+        <p class="grp" style="margin-top:14px">Add your own</p>
+        <div class="row"><input id="gt" maxlength="50" placeholder="e.g. Clean the guinea pig hutch" style="flex:1;min-width:0"><input id="gp" class="payin" type="number" inputmode="decimal" min="0" step="0.05" placeholder="0.50" aria-label="Pay"></div>
+        <button class="btn block" id="gadd" style="margin-top:10px">Add bonus job</button>
+      </div>
+
+      <div class="card">
+        <h3>💡 Ideas for bonus jobs</h3>
+        <p class="muted" style="margin-top:-4px">Tap + to add one. You can change the price after.</p>
+        ${GIG_SUGGESTIONS.map((c, ci) => `<p class="grp">${c.cat}</p>${c.list.map((g, gi) => `<div class="erow" style="align-items:center"><span style="flex:1;min-width:0">${g.e} ${esc(g.t)} <small class="muted">${fmtMoney(g.pay)}</small></span>
+          ${chosen.has(g.t) ? '<span class="tagp ok">Added</span>' : `<button class="addgig" data-ci="${ci}" data-gi="${gi}" aria-label="Add">+</button>`}</div>`).join('')}`).join('')}
+      </div>
+
+      <div class="card">
+        <h3>📒 Money in and out</h3>
+        <p class="muted" style="margin-top:-4px">Balance: <b>${fmtMoney(balance())}</b></p>
+        <div class="row"><input id="adjamt" class="payin" type="number" inputmode="decimal" min="0" step="0.05" placeholder="1.00" aria-label="Amount"><input id="adjnote" maxlength="40" placeholder="What for?" style="flex:1;min-width:0"></div>
+        <div class="row" style="margin-top:10px"><button class="btn ghost" id="adjout">− Paid out / spent</button><button class="btn" id="adjin">+ Add money</button></div>
+      </div>
+
+      <div class="card">
+        <h3>🎯 Savings goal</h3>
+        <div class="row"><input id="goaln" maxlength="30" placeholder="e.g. Art set" value="${esc(M().goal ? M().goal.name : '')}" style="flex:1;min-width:0"><input id="goala" class="payin" type="number" inputmode="decimal" min="0" step="0.5" placeholder="8.00" value="${M().goal ? M().goal.amt.toFixed(2) : ''}" aria-label="Goal amount"></div>
+        <div class="row" style="margin-top:10px">${M().goal ? '<button class="btn ghost" id="goalx">Clear goal</button>' : ''}<button class="btn" id="goals">Save goal</button></div>
+      </div>
+
+      <div class="card">
+        <h3>🔒 PIN</h3>
+        <button class="btn ghost block" id="newpin">Change PIN</button>
+        <button class="btn ghost block" id="lock" style="margin-top:10px">Lock now</button>
+      </div>
+    `);
+    // live pay totals
+    const sums = () => $$('.review').forEach(card => {
+      const key = card.dataset.date, jobs = $$('[data-job]', card), on = jobs.filter(c => c.checked).length;
+      const gigTotal = $$('[data-glog]', card).filter(c => c.checked).reduce((t, c) => t + M().gigLog.find(g => g.id === c.dataset.glog).pay, 0);
+      const d = new Date(key + 'T12:00'), rv = rvOf(key);
+      const all = jobsFor(d).length && rv.paid.length + on >= jobsFor(d).length && !rv.bonus;
+      const total = on * M().rate + (all ? M().dayBonus : 0) + gigTotal;
+      card.querySelector('.paysum').innerHTML = `${on} of ${jobs.length} job${jobs.length === 1 ? '' : 's'}${all && M().dayBonus ? ` + ${fmtMoney(M().dayBonus)} all-done bonus` : ''}${gigTotal ? ` + ${fmtMoney(gigTotal)} bonus jobs` : ''} = <b>${fmtMoney(total)}</b>`;
+      card.querySelector('.approve').dataset.total = total;
+    });
+    sums();
+    $$('.review input').forEach(c => c.onchange = sums);
+    $$('.approve').forEach(b => b.onclick = () => {
+      const card = b.closest('.review'), key = card.dataset.date;
+      // parent's checks become the record for that day
+      const rv = rvOf(key), d = new Date(key + 'T12:00');
+      const ticks = (S.ticks[key] || []).filter(t => !t.startsWith('job:') || rv.paid.includes(t.slice(4)));
+      $$('[data-job]', card).forEach(c => { if (c.checked){ ticks.push('job:' + c.dataset.job); rv.paid.push(c.dataset.job); } });
+      S.ticks[key] = ticks;
+      if (jobsFor(d).every(j => rv.paid.includes(j.id))) rv.bonus = true;
+      $$('[data-glog]', card).forEach(c => { M().gigLog.find(g => g.id === c.dataset.glog).status = c.checked ? 'paid' : 'declined'; });
+      const total = +b.dataset.total;
+      if (total > 0) addLedger(total, key === dkey() ? 'Jobs today' : 'Jobs', key);
+      M().reviewed[key] = rv;
+      save(); toast(total > 0 ? `${fmtMoney(total)} added 💷` : 'Checked ✓'); draw();
+    });
+    $('#rate').onchange = e => { M().rate = +e.target.value; save(); draw(); };
+    $('#bonus').onchange = e => { M().dayBonus = +e.target.value; save(); draw(); };
+    $('#cur').onchange = e => { M().cur = e.target.value; save(); draw(); };
+    $$('.payin[data-k]').forEach(i => i.onchange = () => { const v = Math.max(0, +i.value || 0); M().gigs[+i.dataset.k].pay = Math.round(v * 100) / 100; save(); });
+    $$('[data-gk]').forEach(b => b.onclick = () => { M().gigs.splice(+b.dataset.gk, 1); save(); const y = scrollY; draw(); scrollTo(0, y); });
+    $$('.addgig').forEach(b => b.onclick = () => {
+      const g = GIG_SUGGESTIONS[+b.dataset.ci].list[+b.dataset.gi];
+      M().gigs.push({ id: uid(), e: g.e, t: g.t, pay: g.pay }); chosen.add(g.t); save();
+      toast(`Added: ${g.t}`); const y = scrollY; draw(); scrollTo(0, y);
+    });
+    $('#gadd').onclick = () => {
+      const t = $('#gt').value.trim(), v = Math.max(0, +$('#gp').value || 0);
+      if (!t){ toast('Type the job first'); return; }
+      M().gigs.push({ id: uid(), e:'⭐', t, pay: Math.round(v * 100) / 100 }); save(); draw();
+    };
+    const adj = sign => {
+      const v = Math.abs(+$('#adjamt').value || 0), note = $('#adjnote').value.trim();
+      if (!v){ toast('Type an amount first'); return; }
+      addLedger(sign * v, note || (sign > 0 ? 'Money added' : 'Paid out')); save(); toast('Saved'); draw();
+    };
+    $('#adjin').onclick = () => adj(1);
+    $('#adjout').onclick = () => adj(-1);
+    $('#goals').onclick = () => {
+      const n = $('#goaln').value.trim(), a = +$('#goala').value || 0;
+      if (!n || a <= 0){ toast('Add a name and an amount'); return; }
+      M().goal = { name: n, amt: a }; save(); toast('Goal saved 🎯'); draw();
+    };
+    if ($('#goalx')) $('#goalx').onclick = () => { M().goal = null; save(); draw(); };
+    $('#newpin').onclick = () => { M().pin = ''; save(); parentUnlocked = false; moneyParent(); };
+    $('#lock').onclick = () => { parentUnlocked = false; location.hash = '#/money'; };
+  };
+  draw();
+}
+
+function parentGate(next){
+  const setting = !M().pin;
+  view(`
+    <div class="bigemoji">🔒</div>
+    <h2 class="center">${setting ? 'Choose a grown-up PIN' : 'Grown-ups only'}</h2>
+    <p class="intro center">${setting ? 'Pick 4 numbers to keep pocket money for grown-ups.' : 'Type the 4-number PIN.'}</p>
+    <input id="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="••••" style="text-align:center;font-size:28px;letter-spacing:10px">
+    <button class="btn block" id="go" style="margin-top:12px">${setting ? 'Save PIN' : 'Unlock'}</button>
+    ${setting ? '' : '<button class="btn ghost block" id="forgot" style="margin-top:10px">Forgot the PIN?</button>'}
+    <div id="fg"></div>
+  `);
+  const go = () => {
+    const v = $('#pin').value.trim();
+    if (!/^\d{4}$/.test(v)){ toast('Use 4 numbers'); return; }
+    if (setting){ M().pin = v; save(); parentUnlocked = true; toast('PIN saved'); next(); }
+    else if (v === M().pin){ parentUnlocked = true; next(); }
+    else { toast('That PIN isn\'t right'); $('#pin').value = ''; }
+  };
+  $('#go').onclick = go;
+  $('#pin').onkeydown = e => { if (e.key === 'Enter') go(); };
+  if ($('#forgot')) $('#forgot').onclick = () => {
+    const a = 13 + Math.floor(Math.random() * 12), b = 13 + Math.floor(Math.random() * 12);
+    $('#fg').innerHTML = `<div class="card" style="margin-top:14px"><p>Grown-up check: what is <b>${a} × ${b}</b>?</p>
+      <div class="row"><input id="fga" inputmode="numeric" maxlength="4" style="flex:1;min-width:0"><button class="btn" id="fgo" style="flex:none">Reset PIN</button></div></div>`;
+    $('#fgo').onclick = () => { if (+$('#fga').value === a * b){ M().pin = ''; save(); parentGate(next); } else toast('Not quite. Try again'); };
+  };
 }
 
 /* ---------- Start ---------- */
