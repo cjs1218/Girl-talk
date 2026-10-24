@@ -261,3 +261,5 @@ label.lbl{display:block;font-weight:800;margin:14px 0 6px}
 .del{border:0;background:var(--bad-soft);color:var(--bad);width:36px;height:36px;border-radius:50%;font-weight:900;cursor:pointer;flex:none}
 .elist .row{margin-top:10px}
 .elist .row input{flex:1;min-width:0}
+
+.timepick select{flex:1;min-width:0}

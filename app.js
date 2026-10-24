@@ -1086,6 +1086,8 @@ const DAY_KEYS = ['mon','tue','wed','thu','fri','sat','sun'];
 const DAY_LONG = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 const addDays = n => { const d = new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate() + n); return d; };
 const dayIdx = d => (d.getDay() + 6) % 7;
+const fmtHour = h => `${h % 12 || 12}${h < 12 ? 'am' : 'pm'}`;
+const fmtTime = t => { if (!t) return ''; const [h, m] = t.split(':').map(Number); return `${h % 12 || 12}${m ? ':' + pad(m) : ''}${h < 12 ? 'am' : 'pm'}`; };
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5);
 
 function bagFor(d){
@@ -1141,7 +1143,7 @@ function week(){
       ${isToday ? `<div class="card soft"><b>${done} of ${total} done today</b><div class="progress" style="margin-bottom:0"><i style="width:${total ? Math.round(done/total*100) : 0}%"></i></div></div>` : ''}
 
       <h3>Clubs and activities</h3>
-      ${clubs.length ? clubs.map(c => `<div class="club"><span class="ce">${c.e}</span><span><b>${esc(c.name)}</b>${c.time ? `<small>${esc(c.time)}</small>` : ''}</span></div>`).join('')
+      ${clubs.length ? clubs.map(c => `<div class="club"><span class="ce">${c.e}</span><span><b>${esc(c.name)}</b>${c.time ? `<small>${fmtTime(c.time)}</small>` : ''}</span></div>`).join('')
         : `<div class="card muted center">No clubs ${isToday ? 'today' : 'this day'}. Free time! 🎉</div>`}
 
       <h3 style="margin-top:18px">🎒 Pack my bag${weekOffset === 1 ? ' for tomorrow' : ''}</h3>
@@ -1199,7 +1201,10 @@ function weekEdit(){
               <input data-c="${k}" data-f="name" value="${esc(c.name)}" maxlength="30" placeholder="Club name" style="flex:1;min-width:0">
             </div>
             <label class="lbl">Time (optional)</label>
-            <input type="time" data-c="${k}" data-f="time" value="${esc(c.time)}">
+            <div class="row timepick">
+              <select data-c="${k}" data-t="h" aria-label="Hour"><option value="">No time</option>${[...Array(16)].map((_,n) => { const h = pad(n+6); return `<option value="${h}" ${c.time.slice(0,2)===h?'selected':''}>${fmtHour(n+6)}</option>`; }).join('')}</select>
+              <select data-c="${k}" data-t="m" aria-label="Minutes" ${c.time ? '' : 'disabled'}>${['00','15','30','45'].map(m => `<option value="${m}" ${c.time.slice(3)===m?'selected':''}>:${m}</option>`).join('')}</select>
+            </div>
             <label class="lbl">What to pack (one per line)</label>
             <textarea data-c="${k}" data-f="bag" placeholder="e.g. Swimming costume">${esc(c.bag.join('\n'))}</textarea>
             <button class="btn ghost block delclub" data-c="${k}" style="margin-top:10px">Remove this club</button>
@@ -1224,6 +1229,11 @@ function weekEdit(){
       c[f] = f === 'bag' ? el.value.split('\n').map(x => x.trim()).filter(Boolean) : el.value;
       save();
       if (f === 'e') draw();
+    }));
+    $$('[data-t]').forEach(el => el.addEventListener('change', () => {
+      const k = +el.dataset.c, c = clubs[k];
+      const h = $(`select[data-c="${k}"][data-t="h"]`).value, m = $(`select[data-c="${k}"][data-t="m"]`).value || '00';
+      c.time = h ? `${h}:${m}` : ''; save(); draw();
     }));
     $$('.delclub').forEach(b => b.onclick = () => {
       if (!b.dataset.sure){ b.dataset.sure = '1'; b.textContent = 'Tap again to remove'; return; }
