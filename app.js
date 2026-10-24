@@ -9,6 +9,7 @@ const DEFAULTS = { setup:false, name:'', avatar:'🦄', stars:0, earned:{}, stre
 function loadState(){ try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e){ return {}; } }
 let S = Object.assign(JSON.parse(JSON.stringify(DEFAULTS)), loadState());
 if (!S.routine) S.routine = JSON.parse(JSON.stringify(ROUTINE_DEFAULT));
+S.routine.school = S.routine.school.map(x => typeof x === 'string' ? { t:x } : x);
 if (!S.ticks) S.ticks = {};
 if (!S.noSchool) S.noSchool = {};
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} updateStars(); }
@@ -1095,7 +1096,8 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,5
 function bagFor(d){
   const key = dkey(d), di = dayIdx(d);
   const groups = [];
-  if (di < 5 && !S.noSchool[key] && S.routine.school.length) groups.push({ id:'school', e:'🏫', name:'School', items:S.routine.school });
+  const school = S.routine.school.filter(i => onDay(i, DAY_KEYS[di])).map(i => i.t);
+  if (di < 5 && !S.noSchool[key] && school.length) groups.push({ id:'school', e:'🏫', name:'School', items:school });
   (S.routine.clubs[DAY_KEYS[di]] || []).forEach(c => { if (c.bag.length) groups.push({ id:c.id, e:c.e, name:c.name, items:c.bag }); });
   return groups;
 }
@@ -1111,11 +1113,12 @@ function toggleTick(date, id){
   save();
   return i < 0;
 }
-const allJobs = () => JOB_PARTS.flatMap(p => S.routine.jobs[p.id]);
+const onDay = (it, dk) => !it.days || it.days.includes(dk);
+const jobsFor = d => JOB_PARTS.flatMap(p => S.routine.jobs[p.id].filter(j => onDay(j, DAY_KEYS[dayIdx(d)])));
 
 function todayCount(){
   const d = addDays(0), key = dkey(d);
-  const ids = [...allJobs().map(j => 'job:' + j.id), ...bagIds(d).map(b => 'bag:' + b)];
+  const ids = [...jobsFor(d).map(j => 'job:' + j.id), ...bagIds(d).map(b => 'bag:' + b)];
   return { done: ids.filter(id => ticked(key, id)).length, total: ids.length };
 }
 
@@ -1156,7 +1159,7 @@ function week(){
 
       <h3 style="margin-top:18px">✅ My jobs</h3>
       ${isToday ? JOB_PARTS.map(p => `<div class="card"><p class="grp">${p.e} ${p.name}</p>
-          ${S.routine.jobs[p.id].map(j => checkRow('job:' + j.id, j.e, j.t)).join('') || '<p class="muted" style="margin:0">No jobs here.</p>'}
+          ${S.routine.jobs[p.id].filter(j => onDay(j, DAY_KEYS[di])).map(j => checkRow('job:' + j.id, j.e, j.t)).join('') || '<p class="muted" style="margin:0">No jobs here.</p>'}
           ${p.id === 'bedtime' ? '<button class="btn ghost block" id="tmrw" style="margin-top:10px">🎒 Open tomorrow\'s bag</button>' : ''}</div>`).join('')
         : `<div class="card muted center">Jobs are ticked off on the day. Come back ${weekOffset === 1 ? 'tomorrow' : 'on ' + DAY_LONG[di]}!</div>`}
 
@@ -1186,7 +1189,11 @@ function weekEdit(){
   const R = S.routine;
   const listEditor = (key, items, placeholder) => `
     <div class="elist" data-list="${key}">
-      ${items.map((it, k) => `<div class="erow"><span>${esc(typeof it === 'string' ? it : it.e + ' ' + it.t)}</span><button class="del" data-list="${key}" data-k="${k}" aria-label="Remove">✕</button></div>`).join('')}
+      ${items.map((it, k) => { const dks = key === 'school' ? DAY_KEYS.slice(0,5) : DAY_KEYS; const none = it.days && !it.days.length;
+        return `<div class="erow"><div class="etext"><span>${esc((it.e ? it.e + ' ' : '') + it.t)}</span>
+          <div class="daychips">${dks.map(dk => `<button class="dchip ${onDay(it, dk) ? 'on' : ''}" data-list="${key}" data-k="${k}" data-day="${dk}" aria-label="${DAY_LONG[DAY_KEYS.indexOf(dk)]}">${DAY_LONG[DAY_KEYS.indexOf(dk)].slice(0,2)}</button>`).join('')}</div>
+          ${none ? '<small class="warn">Not on any day. Tap a day to turn it on.</small>' : ''}</div>
+          <button class="del" data-list="${key}" data-k="${k}" aria-label="Remove">✕</button></div>`; }).join('')}
       <div class="row"><input id="add-${key}" maxlength="50" placeholder="${placeholder}"><button class="btn addbtn" data-list="${key}" style="flex:none">Add</button></div>
     </div>`;
   const draw = () => {
@@ -1221,7 +1228,7 @@ function weekEdit(){
       </div>
       <div class="card">
         <h3>🏫 School bag</h3>
-        <p class="muted" style="margin-top:-4px">Packed every school day, Monday to Friday.</p>
+        <p class="muted" style="margin-top:-4px">Tap the days each thing is needed. Lit-up days are on.</p>
         ${listEditor('school', R.school, 'e.g. Reading book')}
       </div>
       ${JOB_PARTS.map(p => `<div class="card"><h3>${p.e} ${p.name} jobs</h3>${listEditor(p.id, R.jobs[p.id], 'e.g. Feed the cat')}</div>`).join('')}
@@ -1270,11 +1277,19 @@ function weekEdit(){
       const ins = $$('.clubedit input[data-f=name]'); ins[ins.length-1].focus(); };
     const listOf = key => key === 'school' ? R.school : R.jobs[key];
     const partEmoji = { morning:'☀️', after:'🏠', bedtime:'🌙' };
+    $$('.dchip').forEach(b => b.onclick = () => {
+      const it = listOf(b.dataset.list)[+b.dataset.k], dk = b.dataset.day;
+      const all = b.dataset.list === 'school' ? DAY_KEYS.slice(0,5) : DAY_KEYS;
+      let days = it.days ? it.days.slice() : all.slice();
+      days = days.includes(dk) ? days.filter(x => x !== dk) : [...days, dk];
+      if (all.every(x => days.includes(x))) delete it.days; else it.days = all.filter(x => days.includes(x));
+      save(); const y = window.scrollY; draw(); window.scrollTo(0, y);
+    });
     $$('.del').forEach(b => b.onclick = () => { listOf(b.dataset.list).splice(+b.dataset.k, 1); save(); draw(); });
     $$('.addbtn').forEach(b => b.onclick = () => {
       const key = b.dataset.list, inp = $('#add-' + key), v = inp.value.trim();
       if (!v) return;
-      listOf(key).push(key === 'school' ? v : { id: uid(), e: partEmoji[key], t: v });
+      listOf(key).push(key === 'school' ? { t: v } : { id: uid(), e: partEmoji[key], t: v });
       save(); draw();
     });
     $('#resetweek').onclick = e => {

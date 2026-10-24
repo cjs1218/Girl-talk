@@ -439,7 +439,8 @@ const ROUTINE_DEFAULT = {
     sat: [{ id:'c4', e:'💃', name:'Dance', time:'10:00', bag:['Leotard','Ballet shoes','Hair bobble','Water bottle'] }],
     sun: []
   },
-  school: ['Reading book & record','Water bottle','Lunchbox','Coat'],
+  school: [{ t:'Reading book & record' }, { t:'Water bottle' }, { t:'Lunchbox' }, { t:'Coat' }],
+  // A job or school item with no 'days' happens every day. Add days:['mon','tue',...] to limit it.
   jobs: {
     morning: [
       { id:'j1', e:'🛏️', t:'Make my bed' },
@@ -449,8 +450,8 @@ const ROUTINE_DEFAULT = {
       { id:'j5', e:'💇‍♀️', t:'Brush my hair' }
     ],
     after: [
-      { id:'j6', e:'🎒', t:'Unpack my school bag' },
-      { id:'j7', e:'🥪', t:'Lunchbox to the kitchen' },
+      { id:'j6', e:'🎒', t:'Unpack my school bag', days:['mon','tue','wed','thu','fri'] },
+      { id:'j7', e:'🥪', t:'Lunchbox to the kitchen', days:['mon','tue','wed','thu','fri'] },
       { id:'j8', e:'📖', t:'Reading or homework' }
     ],
     bedtime: [
