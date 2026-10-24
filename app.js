@@ -11,7 +11,8 @@ let S = Object.assign(JSON.parse(JSON.stringify(DEFAULTS)), loadState());
 if (!S.routine) S.routine = JSON.parse(JSON.stringify(ROUTINE_DEFAULT));
 S.routine.school = S.routine.school.map(x => typeof x === 'string' ? { t:x } : x);
 if (!S.ticks) S.ticks = {};
-S.money = Object.assign({ rate:0.10, dayBonus:0.20, cur:'£', gigs:[], pin:'', ledger:[], reviewed:{}, gigLog:[], goal:null }, S.money || {});
+S.money = Object.assign({ rate:0.10, dayBonus:0.20, cur:'£', gigs:[], pin:'', ledger:[], reviewed:{}, gigLog:[], goals:[], wishes:[] }, S.money || {});
+if (S.money.goal){ S.money.goals.push({ id:'g0', e:'🎯', name:S.money.goal.name, amt:S.money.goal.amt, saved:0 }); delete S.money.goal; }
 if (!S.noSchool) S.noSchool = {};
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} updateStars(); }
 
@@ -138,6 +139,7 @@ function home(){
     </section>
     <a class="checkin" href="#/calm/feelings">How are you feeling today? <span>→</span></a>
     ${weekBanner()}
+    ${moneyBanner()}
     ${petBanner()}
     <div class="islands">
       ${ISLANDS.map(i => `<a class="island ${i.id}" href="#/${i.id}"><span class="isl-emoji">${i.emoji}</span><span class="isl-name">${i.name}</span><span class="isl-sub">${i.sub}</span></a>`).join('')}
@@ -902,7 +904,7 @@ function grownups(){
     const b = e.currentTarget;
     if (!b.dataset.sure){ b.dataset.sure = '1'; b.textContent = 'Tap again to delete everything'; return; }
     try { localStorage.removeItem(KEY); } catch(err){}
-    S = JSON.parse(JSON.stringify(DEFAULTS)); S.routine = JSON.parse(JSON.stringify(ROUTINE_DEFAULT)); S.ticks = {}; S.noSchool = {}; S.money = { rate:0.10, dayBonus:0.20, cur:'£', gigs:[], pin:'', ledger:[], reviewed:{}, gigLog:[], goal:null }; updateStars(); location.hash = '#/setup'; route();
+    S = JSON.parse(JSON.stringify(DEFAULTS)); S.routine = JSON.parse(JSON.stringify(ROUTINE_DEFAULT)); S.ticks = {}; S.noSchool = {}; S.money = { rate:0.10, dayBonus:0.20, cur:'£', gigs:[], pin:'', ledger:[], reviewed:{}, gigLog:[], goals:[], wishes:[] }; updateStars(); location.hash = '#/setup'; route();
   };
 }
 
@@ -1336,21 +1338,55 @@ function daysToCheck(){
   return out;
 }
 
+const inGoals = () => M().goals.reduce((t, g) => t + g.saved, 0);
+const spendable = () => Math.round((balance() - inGoals()) * 100) / 100;
+// If money was paid out, take it back out of goals so the numbers always add up
+function fixGoals(){
+  let over = inGoals() - Math.max(0, balance());
+  for (let i = M().goals.length - 1; i >= 0 && over > 0.001; i--){
+    const g = M().goals[i], take = Math.min(g.saved, over);
+    g.saved = Math.round((g.saved - take) * 100) / 100; over -= take;
+  }
+}
+function moneyBanner(){
+  const g = M().goals.length, w = M().wishes.length;
+  const sub = [g ? `${g} goal${g === 1 ? '' : 's'}` : '', w ? `${w} on wish list` : ''].filter(Boolean).join(' · ') || 'Earn, save and plan';
+  return `<a class="petbanner moneybanner" href="#/money"><span class="pb-pet">💷</span><span><b>Pocket money · ${fmtMoney(balance())}</b><small>${sub}</small></span><span class="pb-go">→</span></a>`;
+}
+const PICS = ['🎨','🧸','📚','🎮','🛼','🎧','👗','🦄','🎁','🐶','⚽','🎹','💄','🧩','📱','🎟️','🍦','🚲','⛺','🎀'];
+const daysAgo = iso => Math.floor((new Date(dkey() + 'T12:00') - new Date(iso + 'T12:00')) / 864e5);
+const amtIn = id => Math.round(Math.max(0, +($(id).value) || 0) * 100) / 100;
+
+let moneyTab = 'earned';
 function money(){
-  setTop('Pocket money', '#/week', 'money');
+  setTop('Pocket money', '#/home', 'money');
+  fixGoals(); save();
+  const tabs = [['earned','💷 Earned'],['goals','🎯 Goals'],['wish','💭 Wish list']];
+  const top = `
+    <div class="card center moneycard">
+      <p class="muted" style="margin:0">I have</p>
+      <div class="bigmoney">${fmtMoney(balance())}</div>
+      <div class="split"><span><b>${fmtMoney(Math.max(0, spendable()))}</b><small>to spend</small></span><span><b>${fmtMoney(inGoals())}</b><small>in my goals</small></span></div>
+    </div>
+    <div class="tabs">${tabs.map(([id, n]) => `<button class="tab ${moneyTab === id ? 'on' : ''}" data-mt="${id}">${n}</button>`).join('')}</div>`;
+  const body = moneyTab === 'goals' ? goalsTab() : moneyTab === 'wish' ? wishTab() : earnedTab();
+  view(top + body.html);
+  $$('[data-mt]').forEach(b => b.onclick = () => { moneyTab = b.dataset.mt; money(); });
+  body.bind();
+}
+
+function earnedTab(){
   const today = dkey();
   const waiting = daysToCheck().reduce((t, x) => t + x.jobTicks + x.gigs, 0);
-  const g = M().goal, bal = balance();
-  view(`
-    <div class="card center moneycard">
-      <p class="muted" style="margin:0">My pocket money</p>
-      <div class="bigmoney">${fmtMoney(bal)}</div>
-      ${waiting ? `<p style="margin:0">⏳ ${waiting} job${waiting === 1 ? '' : 's'} waiting for a grown-up to check</p>` : '<p class="muted" style="margin:0">Everything has been checked ✓</p>'}
+  const sumSince = n => M().ledger.filter(l => l.amt > 0 && daysAgo(l.date) < n).reduce((t, l) => t + l.amt, 0);
+  const ever = M().ledger.filter(l => l.amt > 0).reduce((t, l) => t + l.amt, 0);
+  return { html: `
+    <div class="stats">
+      <div><b>${fmtMoney(sumSince(7))}</b><small>this week</small></div>
+      <div><b>${fmtMoney(sumSince(30))}</b><small>this month</small></div>
+      <div><b>${fmtMoney(ever)}</b><small>ever</small></div>
     </div>
-    ${g ? `<div class="card"><p class="grp">🎯 Saving for ${esc(g.name)}</p>
-      <div class="progress"><i style="width:${Math.min(100, Math.round(Math.max(0, bal) / g.amt * 100))}%"></i></div>
-      <p style="margin:-6px 0 0">${fmtMoney(Math.max(0, bal))} of ${fmtMoney(g.amt)}${bal >= g.amt ? ' 🎉 You\'ve saved enough!' : ` · ${fmtMoney(g.amt - Math.max(0, bal))} to go`}</p></div>` : ''}
-
+    ${waiting ? `<div class="card soft">⏳ ${waiting} job${waiting === 1 ? '' : 's'} waiting for a grown-up to check</div>` : ''}
     <h3>⭐ Bonus jobs</h3>
     <p class="muted" style="margin-top:-6px">Extra jobs to earn more. Tap "I did it!" and a grown-up will check.</p>
     ${M().gigs.length ? M().gigs.map(x => {
@@ -1360,18 +1396,111 @@ function money(){
         : log.status === 'paid' ? '<span class="tagp ok">✓ Paid</span>' : '<span class="tagp no">Not this time</span>';
       return `<div class="club"><span class="ce">${x.e}</span><span style="flex:1;min-width:0"><b>${esc(x.t)}</b><small>${fmtMoney(x.pay)}</small></span>${st}</div>`; }).join('')
       : '<div class="card muted center">No bonus jobs yet. Ask a grown-up to choose some!</div>'}
-
     <h3 style="margin-top:18px">📒 History</h3>
-    <div class="card">${M().ledger.slice(0, 12).map(l => `<div class="entry"><span style="flex:1;min-width:0"><b>${esc(l.note)}</b><small>${new Date(l.date + 'T12:00').toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' })}</small></span><b class="${l.amt < 0 ? 'neg' : 'pos'}">${l.amt > 0 ? '+' : ''}${fmtMoney(l.amt)}</b></div>`).join('') || '<p class="muted" style="margin:0">Nothing yet. Do your jobs and a grown-up will check them at the end of the day.</p>'}</div>
+    <div class="card">${M().ledger.slice(0, 20).map(l => `<div class="entry"><span style="flex:1;min-width:0"><b>${esc(l.note)}</b><small>${new Date(l.date + 'T12:00').toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' })}</small></span><b class="${l.amt < 0 ? 'neg' : 'pos'}">${l.amt > 0 ? '+' : ''}${fmtMoney(l.amt)}</b></div>`).join('') || '<p class="muted" style="margin:0">Nothing yet. Do your jobs and a grown-up will check them.</p>'}</div>
+    <a class="btn ghost block" href="#/money/parent">🔒 Grown-up check</a>`,
+    bind(){
+      $$('[data-gig]').forEach(b => b.onclick = () => {
+        const x = M().gigs.find(g => g.id === b.dataset.gig);
+        M().gigLog.unshift({ id: uid(), gid: x.id, e: x.e, t: x.t, pay: x.pay, date: today, status: 'pending' });
+        M().gigLog = M().gigLog.slice(0, 200);
+        save(); award(`gig-${x.id}-${today}`, 1, 'Bonus job done!'); money();
+      });
+    }};
+}
 
-    <a class="btn ghost block" href="#/money/parent">🔒 Grown-up check</a>
-  `);
-  $$('[data-gig]').forEach(b => b.onclick = () => {
-    const x = M().gigs.find(g => g.id === b.dataset.gig);
-    M().gigLog.unshift({ id: uid(), gid: x.id, e: x.e, t: x.t, pay: x.pay, date: today, status: 'pending' });
-    M().gigLog = M().gigLog.slice(0, 200);
-    save(); award(`gig-${x.id}-${today}`, 1, 'Bonus job done!'); money();
-  });
+function goalsTab(){
+  const sp = Math.max(0, spendable());
+  return { html: `
+    ${M().goals.map(g => { const pct = Math.min(100, Math.round(g.saved / g.amt * 100)), done = g.saved >= g.amt - 0.001;
+      return `<div class="card goalc" data-g="${g.id}">
+        <div class="gh"><span class="ge">${g.e}</span><span style="flex:1;min-width:0"><b>${esc(g.name)}</b><small>${fmtMoney(g.saved)} of ${fmtMoney(g.amt)}${done ? '' : ` · ${fmtMoney(g.amt - g.saved)} to go`}</small></span><button class="del gdel" aria-label="Delete goal">✕</button></div>
+        <div class="progress"><i style="width:${pct}%"></i></div>
+        ${done ? `<button class="btn block gbuy">🎉 I've saved enough! I bought it</button>` : `
+        <p class="muted" style="margin:0 0 8px;font-size:15px">Move money into this goal:</p>
+        <div class="quick">${[0.10, 0.50, 1, 2].map(v => `<button class="qamt" data-v="${v}" ${v > sp + 0.001 ? 'disabled' : ''}>+${fmtMoney(v)}</button>`).join('')}
+          <button class="qamt" data-v="all" ${sp <= 0 ? 'disabled' : ''}>All I can</button></div>`}
+        ${g.saved > 0 && !done ? '<button class="linkbtn gout">Take money back out</button>' : ''}
+      </div>`; }).join('') || '<div class="card muted center">No savings goals yet. What would you like to save up for?</div>'}
+    <div class="card">
+      <h3>🎯 New savings goal</h3>
+      <div class="row"><select id="ge" aria-label="Picture" style="flex:none;width:76px">${PICS.map(e => `<option>${e}</option>`).join('')}</select><input id="gn" maxlength="30" placeholder="e.g. Art set" style="flex:1;min-width:0"></div>
+      <label class="lbl" for="ga">How much does it cost?</label>
+      <input id="ga" type="number" inputmode="decimal" min="0" step="0.5" placeholder="8.00">
+      <button class="btn block" id="gsave" style="margin-top:12px">Start saving</button>
+    </div>
+    <div class="card soft"><p style="margin:0">💡 <b>Saving tip:</b> try putting some of every bit of money you earn into a goal. Little and often adds up!</p></div>`,
+    bind(){
+      const G = el => M().goals.find(g => g.id === el.closest('.goalc').dataset.g);
+      $$('.qamt').forEach(b => b.onclick = () => {
+        const g = G(b), room = Math.round((g.amt - g.saved) * 100) / 100;
+        let v = b.dataset.v === 'all' ? Math.max(0, spendable()) : +b.dataset.v;
+        v = Math.min(v, room, Math.max(0, spendable()));
+        if (v <= 0) return;
+        g.saved = Math.round((g.saved + v) * 100) / 100; save();
+        if (g.saved >= g.amt - 0.001){ confetti(); toast(`You've saved enough for ${g.name}! 🎉`); } else toast(`${fmtMoney(v)} saved 🐷`);
+        money();
+      });
+      $$('.gout').forEach(b => b.onclick = () => { const g = G(b); toast(`${fmtMoney(g.saved)} moved back to spending`); g.saved = 0; save(); money(); });
+      $$('.gbuy').forEach(b => b.onclick = () => {
+        const g = G(b);
+        if (!b.dataset.sure){ b.dataset.sure = '1'; b.textContent = 'Tap again if you bought it'; return; }
+        addLedger(-g.saved, `Bought: ${g.name}`); M().goals = M().goals.filter(x => x !== g);
+        save(); award('goalbuy-' + g.id, 3, 'Saving superstar!'); confetti(); money();
+      });
+      $$('.gdel').forEach(b => b.onclick = () => {
+        if (!b.dataset.sure){ b.dataset.sure = '1'; b.textContent = '?'; toast('Tap ✕ again to delete. The money goes back to spending.'); return; }
+        const g = G(b); M().goals = M().goals.filter(x => x !== g); save(); money();
+      });
+      $('#gsave').onclick = () => {
+        const n = $('#gn').value.trim(), a = amtIn('#ga');
+        if (!n || !a){ toast('Add a name and how much it costs'); return; }
+        M().goals.push({ id: uid(), e: $('#ge').value, name: n, amt: a, saved: 0 }); save();
+        award('firstgoal', 2, 'Goal set!'); money();
+      };
+    }};
+}
+
+function wishTab(){
+  const sp = Math.max(0, spendable());
+  const list = M().wishes.slice().sort((a, b) => b.want - a.want);
+  return { html: `
+    <div class="card soft"><p style="margin:0">💭 Write down things you'd like. <b>Wait a week</b> before buying. If you still really want it, it's probably a good buy!</p></div>
+    ${list.map(w => { const age = daysAgo(w.added), wait = Math.max(0, 7 - age), can = sp >= w.price;
+      return `<div class="card wishc" data-w="${w.id}">
+        <div class="gh"><span class="ge">${w.e}</span><span style="flex:1;min-width:0"><b>${esc(w.name)}</b><small>${fmtMoney(w.price)} · ${wait ? `⏳ thinking time: ${wait} day${wait === 1 ? '' : 's'} left` : '✓ waited a week'}</small></span><button class="del wdel" aria-label="Remove">✕</button></div>
+        <div class="hearts"><span class="muted">How much do I want it?</span>${[1,2,3].map(n => `<button class="hrt ${n <= w.want ? 'on' : ''}" data-n="${n}" aria-label="${n}">${n <= w.want ? '❤️' : '🤍'}</button>`).join('')}</div>
+        <div class="row">
+          <button class="btn ghost wgoal">🎯 Save for it</button>
+          <button class="btn wbuy" ${can ? '' : 'disabled'}>${can ? 'I bought it' : `Need ${fmtMoney(w.price - sp)} more`}</button>
+        </div>
+      </div>`; }).join('') || '<div class="card muted center">Your wish list is empty.</div>'}
+    <div class="card">
+      <h3>➕ Add to my wish list</h3>
+      <div class="row"><select id="we" aria-label="Picture" style="flex:none;width:76px">${PICS.map(e => `<option>${e}</option>`).join('')}</select><input id="wn" maxlength="30" placeholder="e.g. Glitter gel pens" style="flex:1;min-width:0"></div>
+      <label class="lbl" for="wp">About how much is it?</label>
+      <input id="wp" type="number" inputmode="decimal" min="0" step="0.5" placeholder="3.50">
+      <button class="btn block" id="wsave" style="margin-top:12px">Add to wish list</button>
+    </div>`,
+    bind(){
+      const W = el => M().wishes.find(w => w.id === el.closest('.wishc').dataset.w);
+      $$('.hrt').forEach(b => b.onclick = () => { W(b).want = +b.dataset.n; save(); money(); });
+      $$('.wgoal').forEach(b => b.onclick = () => {
+        const w = W(b); M().goals.push({ id: uid(), e: w.e, name: w.name, amt: w.price, saved: 0 });
+        M().wishes = M().wishes.filter(x => x !== w); save(); toast('Moved to your savings goals 🎯'); moneyTab = 'goals'; money();
+      });
+      $$('.wbuy').forEach(b => b.onclick = () => {
+        const w = W(b);
+        if (!b.dataset.sure){ b.dataset.sure = '1'; b.textContent = 'Tap again to confirm'; return; }
+        addLedger(-w.price, `Bought: ${w.name}`); M().wishes = M().wishes.filter(x => x !== w); save(); toast(`Enjoy your ${w.name}! 🛍️`); money();
+      });
+      $$('.wdel').forEach(b => b.onclick = () => { const w = W(b); M().wishes = M().wishes.filter(x => x !== w); save(); money(); });
+      $('#wsave').onclick = () => {
+        const n = $('#wn').value.trim(), p = amtIn('#wp');
+        if (!n){ toast('What would you like?'); return; }
+        M().wishes.push({ id: uid(), e: $('#we').value, name: n, price: p, want: 2, added: dkey() }); save(); money();
+      };
+    }};
 }
 
 let parentUnlocked = false;
@@ -1432,12 +1561,6 @@ function moneyParent(){
       </div>
 
       <div class="card">
-        <h3>🎯 Savings goal</h3>
-        <div class="row"><input id="goaln" maxlength="30" placeholder="e.g. Art set" value="${esc(M().goal ? M().goal.name : '')}" style="flex:1;min-width:0"><input id="goala" class="payin" type="number" inputmode="decimal" min="0" step="0.5" placeholder="8.00" value="${M().goal ? M().goal.amt.toFixed(2) : ''}" aria-label="Goal amount"></div>
-        <div class="row" style="margin-top:10px">${M().goal ? '<button class="btn ghost" id="goalx">Clear goal</button>' : ''}<button class="btn" id="goals">Save goal</button></div>
-      </div>
-
-      <div class="card">
         <h3>🔒 PIN</h3>
         <button class="btn ghost block" id="newpin">Change PIN</button>
         <button class="btn ghost block" id="lock" style="margin-top:10px">Lock now</button>
@@ -1491,12 +1614,6 @@ function moneyParent(){
     };
     $('#adjin').onclick = () => adj(1);
     $('#adjout').onclick = () => adj(-1);
-    $('#goals').onclick = () => {
-      const n = $('#goaln').value.trim(), a = +$('#goala').value || 0;
-      if (!n || a <= 0){ toast('Add a name and an amount'); return; }
-      M().goal = { name: n, amt: a }; save(); toast('Goal saved 🎯'); draw();
-    };
-    if ($('#goalx')) $('#goalx').onclick = () => { M().goal = null; save(); draw(); };
     $('#newpin').onclick = () => { M().pin = ''; save(); parentUnlocked = false; moneyParent(); };
     $('#lock').onclick = () => { parentUnlocked = false; location.hash = '#/money'; };
   };
